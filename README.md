@@ -45,14 +45,14 @@ Under "SPONSORS ADD INFO HERE" heading below, include the following:
 
 ---
 
-# Jaqen contest details
-- $47,500 USDC main award pot
-- $2,500 USDC gas optimization award pot
+# veToken contest details
+- $71,250 USDT main award pot
+- $3,750 USDT gas optimization award pot
 - Join [C4 Discord](https://discord.gg/code4rena) to register
-- Submit findings [using the C4 form](https://code4rena.com/contests/2022-03-jaqen-contest/submit)
+- Submit findings [using the C4 form](https://code4rena.com/contests/2022-05-vetoken-contest/submit)
 - [Read our guidelines for more details](https://docs.code4rena.com/roles/wardens)
-- Starts March 10, 2022 00:00 UTC
-- Ends March 14, 2022 23:59 UTC
+- Starts May 12, 2022 00:00 UTC
+- Ends May 18, 2022 23:59 UTC
 
 This repo will be made public before the start of the contest. (C4 delete this line when made public)
 

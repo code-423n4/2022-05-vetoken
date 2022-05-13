@@ -45,7 +45,7 @@ Under "SPONSORS ADD INFO HERE" heading below, include the following:
 
 ---
 
-# veToken contest details
+# veToken Finance contest details
 - $71,250 USDT main award pot
 - $3,750 USDT gas optimization award pot
 - Join [C4 Discord](https://discord.gg/code4rena) to register

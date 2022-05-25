@@ -21,7 +21,7 @@ veToken Finance is an forked version of the convex yield protocol that targets a
 
 ## Contracts Of Interest
 - VeAssetDepositor
-  - this contract allow users to lock their veAsset token like crv, pickle, ribbon...etc 
+  - this contract allows users to lock their veAsset token like crv, pickle, ribbon...etc 
   - users get VE3Token in exchange
   - users can stake VE3Token in the base reward pool
   - the veAsset token deposited to the contract , will be transferred to external locking contract (voting escrow) of each veAsset project by VoterProxy contract 
@@ -30,7 +30,7 @@ veToken Finance is an forked version of the convex yield protocol that targets a
   - for each veAsset project, there will be a dedicated VeAssetDepositor contract deployed.
    
 - Booster
-  - this contract allow users to deposit lp tokens getting from veAsset projects
+  - this contract allows users to deposit lp tokens getting from veAsset projects
   - users get another new token in exchange (token name is concatenated from lp token name + "veToken Deposit")
   - users can stake the new token in the base reward pool 
   - the lp token deposited to the contract, will be transferred to external gauges of each veAsset project by VoterProxy contract 
@@ -40,18 +40,18 @@ veToken Finance is an forked version of the convex yield protocol that targets a
   - for each veAsset project, there will be a dedicated Booster contract deployed.
 
 - BaseRewardPool
-  - this contract allow users to stake their VE3Token which they get when depositing their veAsset token in VeAssetDepositor contract
+  - this contract allows users to stake their VE3Token which they get when depositing their veAsset token in VeAssetDepositor contract
   - this contract also allows users to stake the new token they get in exchange when depositing lp token to the Booster contract. For each new token representing a lp pool, a new instance of this contract will be created by reward factory contract.
   - for reward pool of VE3token , it collects a portion (configurable) of veAsset token collected from gauges + fee token collected from fee distro contract as extra reward 
   - for reward pool of lp token, it collects no less than 80% of veAsset token collected from gauges   
   - there are extra pools which added to the reward pool for extra reward tokens collected from veAsset project
-  - when a user claim rewards , a certain amount of veToken will be minted based on formula  
+  - when a user claims rewards , a certain amount of veToken will be minted based on formula  
   - it is one contract instance for each veAsset project , and one for each lp token
 
 - VE3DRewardPool   
-  - this contract allow users to stake veToken token 
+  - this contract allows users to stake veToken token 
   - it gets a portion (configurable) of veAsset token collected from gauges for all projects 
-  - when a user claim rewards , the contract will lock his veAsset rewards in VeAssetDepositor contract and mint him VE3Tokens with option to stake them in base reward pool
+  - when a user claim s rewards , the contract will lock his veAsset rewards in VeAssetDepositor contract and mint him VE3Tokens with option to stake them in base reward pool
   - There is only one contract for the platform
  
 - VoterProxy
@@ -73,7 +73,7 @@ ve3Token is tokenized for veAsset. And locked veAsset kept in projects’s Votin
 LP tokens are received for depositing assets into veAsset farming pools or liquidity pools ( eg: Deposit liquidity into the angle pool without staking in the angle gauge) . And LP Token then deposited to Booster contracts and receives TOKEN (VE3DlpToken). And this TOKEN can stake into the BaseRewardPool in order to receive boosted rewards. Once deposited in the Booster. The LP tokens will be sent through VoterProxy which then deposits into their corresponding gauges.
 
 Rewards can be harvested by calling earmarkRewards and earmarkFees on the Booster contract for a specific pool. This then calls claimVeAsset
- (claims Fees ), claimRewards (claims any additional reward tokens registered for the gauge) and claimFees (claims pool fees from the fee distro). The caller of earmarkRewards and earmarkFees is paid an incentive to do so.
+ (claims Fees), claimRewards (claims any additional reward tokens registered for the gauge) and claimFees (claims pool fees from the fee distro). The caller of earmarkRewards and earmarkFees is paid an incentive to do so.
 
 
 ### Voting

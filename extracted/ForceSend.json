@@ -1,0 +1,17 @@
+{
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address payable",
+          "name": "victim",
+          "type": "address"
+        }
+      ],
+      "name": "go",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    }
+  ]
+}

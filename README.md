@@ -84,7 +84,7 @@ Rewards can be harvested by calling earmarkRewards and earmarkFees on the Booste
 Each voting proxy has the voting power for corresponding projects. And it delegates to veToken Fiannce DAO and vote through projects’ snapshot. Voting hashes are set on the VoterProxy through Booster with EIP-1271 signatures 
 
 
-## Class diagram!
+## Class diagram
 
 
 
@@ -102,13 +102,13 @@ Each voting proxy has the voting power for corresponding projects. And it delega
 
 `set up config keys in secret.json based on secret-copy.json`
 
-### deply idle
+### deploy idle
 
 `npm run idle_network`
 
 `npm run deploy-basic-contract && npm run deploy-local-idle`
 
-### deply angle
+### deploy angle
 
 `npm run angle_network`
 

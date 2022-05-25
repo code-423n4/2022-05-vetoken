@@ -2,7 +2,7 @@
 - $71,250 USDT main award pot
 - $3,750 USDT gas optimization award pot
 - Join [C4 Discord](https://discord.gg/code4rena) to register
-- Submit findings [using the C4 form](https://code4rena.com/contests/2022-05-vetoken-contest/submit)
+- Submit findings [using the C4 form](https://code4rena.com/contests/2022-05-vetoken-finance-contest/submit)
 - [Read our guidelines for more details](https://docs.code4rena.com/roles/wardens)
 - Starts May 26, 2022 20:00 UTC
 - Ends June 2, 2022 19:59 UTC

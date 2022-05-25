@@ -5,7 +5,7 @@
 - Submit findings [using the C4 form](https://code4rena.com/contests/2022-05-vetoken-contest/submit)
 - [Read our guidelines for more details](https://docs.code4rena.com/roles/wardens)
 - Starts May 26, 2022 20:00 UTC
-- Ends June 1, 2022 19:59 UTC
+- Ends June 2, 2022 19:59 UTC
 
 This repo will be made public before the start of the contest. (C4 delete this line when made public)
 

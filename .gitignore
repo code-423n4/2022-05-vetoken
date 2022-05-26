@@ -109,3 +109,4 @@ dist
 #auto generated files and local config
 contracts.json
 secret.json
+build/

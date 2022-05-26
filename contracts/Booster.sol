@@ -53,7 +53,6 @@ contract Booster {
     address public stakerLockRewards; // veToken lock rewards xVE3D
     address public lockRewards; //ve3Token rewards(veAsset)
     address public lockFees; //ve3Token veVeAsset fees
-    address public stakerLockFees; //xVE3D veVeAsset fees
     address public feeToken;
 
     bool public isShutdown;
@@ -202,10 +201,17 @@ contract Booster {
             //create a new reward contract for the new token
             lockFees = IRewardFactory(rewardFactory).CreateTokenRewards(_feeToken, lockRewards);
 
-            stakerLockFees = IRewardFactory(rewardFactory).CreateTokenRewards(
-                _feeToken,
-                stakerLockRewards
-            );
+            if (_feeToken != veAsset) {
+                IRewards(stakerLockRewards).addReward(
+                    _feeToken,
+                    address(0),
+                    address(0),
+                    address(0),
+                    address(this),
+                    false
+                );
+            }
+
             feeToken = _feeToken;
         }
     }
@@ -546,16 +552,16 @@ contract Booster {
                 IERC20(veAsset).safeTransfer(lockRewards, _lockIncentive);
                 IRewards(lockRewards).queueNewRewards(_lockIncentive);
             }
-            //send stakers's share of veAsset to reward contract
+            //send stakers's share of veAsset to VE3D reward contract
             if (_stakerIncentive > 0) {
                 IERC20(veAsset).safeTransfer(stakerRewards, _stakerIncentive);
                 IRewards(stakerRewards).queueNewRewards(veAsset, _stakerIncentive);
             }
 
-            //send stakers's lock share of veAsset to reward contract
+            //send stakers's lock share of veAsset to VE3D locker reward contract
             if (_stakerLockIncentive > 0) {
                 IERC20(veAsset).safeTransfer(stakerLockRewards, _stakerLockIncentive);
-                IRewards(stakerLockRewards).queueNewRewards(_stakerLockIncentive);
+                IRewards(stakerLockRewards).queueNewRewards(veAsset, _stakerLockIncentive);
             }
         }
     }
@@ -582,8 +588,8 @@ contract Booster {
             IRewards(lockFees).queueNewRewards(_lockFeesIncentive);
         }
         if (_stakerLockFeesIncentive > 0) {
-            IERC20(feeToken).safeTransfer(stakerLockFees, _stakerLockFeesIncentive);
-            IRewards(stakerLockFees).queueNewRewards(_stakerLockFeesIncentive);
+            IERC20(feeToken).safeTransfer(stakerLockRewards, _stakerLockFeesIncentive);
+            IRewards(stakerLockRewards).queueNewRewards(feeToken, _stakerLockFeesIncentive);
         }
         return true;
     }

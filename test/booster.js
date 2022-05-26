@@ -7,6 +7,7 @@ const Booster = artifacts.require("Booster");
 const TokenFactory = artifacts.require("TokenFactory");
 const StashFactory = artifacts.require("StashFactory");
 const VE3DRewardPool = artifacts.require("VE3DRewardPool");
+const VE3DLocker = artifacts.require("VE3DLocker");
 const VeTokenMinter = artifacts.require("VeTokenMinter");
 const PoolManager = artifacts.require("PoolManager");
 const VeToken = artifacts.require("VeToken");
@@ -15,17 +16,8 @@ const ITokenMinter = artifacts.require("ITokenMinter");
 const VirtualBalanceRewardPool = artifacts.require("VirtualBalanceRewardPool");
 const ExtraRewardStashV3 = artifacts.require("ExtraRewardStashV3");
 
-const {
-  loadContracts,
-  contractAddresseList,
-  Networks,
-} = require("./helper/dumpAddresses");
-const {
-  ether,
-  balance,
-  constants,
-  time,
-} = require("@openzeppelin/test-helpers");
+const { loadContracts, contractAddresseList, Networks } = require("./helper/dumpAddresses");
+const { ether, balance, constants, time } = require("@openzeppelin/test-helpers");
 const feeDisrtroABI = require("./helper/feeDistroABI.json");
 const pickle_gaugeProxyABI = require("./helper/gaugeProxyABI_pickle.json");
 const gaugeProxyABI = require("./helper/gaugeProxyABI.json");
@@ -33,12 +25,7 @@ const { toBN, log } = require("./helper/utils");
 const truffleAssert = require("truffle-assertions");
 var jsonfile = require("jsonfile");
 var baseContractList = jsonfile.readFileSync("contracts.json");
-const {
-  parseEther,
-  formatEther,
-  parseUnits,
-  formatUnits,
-} = require("@ethersproject/units");
+const { parseEther, formatEther, parseUnits, formatUnits } = require("@ethersproject/units");
 const Reverter = require("./helper/reverter");
 const BigNumber = require("bignumber.js");
 
@@ -73,20 +60,14 @@ contract("Booster", async (accounts) => {
   before("setup", async () => {
     network = await loadContracts();
     // basic contract
-    vetokenMinter = await VeTokenMinter.at(
-      baseContractList.system.vetokenMinter
-    );
+    vetokenMinter = await VeTokenMinter.at(baseContractList.system.vetokenMinter);
     vetoken = await VeToken.at(baseContractList.system.vetoken);
     rFactory = await RewardFactory.at(baseContractList.system.rFactory);
     tFactory = await TokenFactory.at(baseContractList.system.tFactory);
     sFactory = await StashFactory.at(baseContractList.system.sFactory);
     poolManager = await PoolManager.at(baseContractList.system.poolManager);
-    vetokenRewards = await VE3DRewardPool.at(
-      baseContractList.system.vetokenRewards
-    );
-    stakerLockPool = await VE3DRewardPool.at(
-      baseContractList.system.xVE3DRewards
-    );
+    vetokenRewards = await VE3DRewardPool.at(baseContractList.system.vetokenRewards);
+    stakerLockPool = await VE3DLocker.at(baseContractList.system.ve3dLocker);
     // veasset contracts
     veassetToken = await IERC20.at(contractAddresseList[0]);
     escrow = await IERC20.at(contractAddresseList[1]);
@@ -122,60 +103,42 @@ contract("Booster", async (accounts) => {
       await booster.deposit(poolId, depositAmount, true);
 
       assert.equal((await lpToken.balanceOf(USER1)).toString(), 0);
-      assert.equal(
-        (await rewardPool.balanceOf(USER1)).toString(),
-        depositAmount
-      );
+      assert.equal((await rewardPool.balanceOf(USER1)).toString(), depositAmount);
     });
 
     it("deposit lp token without stake", async () => {
       await booster.deposit(poolId, depositAmount, false);
 
       assert.equal((await lpToken.balanceOf(USER1)).toString(), 0);
-      assert.equal(
-        (await exchangeToken.balanceOf(USER1)).toString(),
-        depositAmount
-      );
+      assert.equal((await exchangeToken.balanceOf(USER1)).toString(), depositAmount);
     });
 
     it("should revert if pool shutdown", async () => {
       await poolManager.shutdownPool(booster.address, poolId);
       assert.equal((await booster.poolInfo(poolId))[5], true);
 
-      await truffleAssert.reverts(
-        booster.deposit(poolId, depositAmount, true),
-        "pool is closed"
-      );
+      await truffleAssert.reverts(booster.deposit(poolId, depositAmount, true), "pool is closed");
     });
 
     it("should revert if system shutdown", async () => {
       await booster.shutdownSystem();
       assert.equal(await booster.isShutdown(), true);
 
-      await truffleAssert.reverts(
-        booster.deposit(poolId, depositAmount, true),
-        "shutdown"
-      );
+      await truffleAssert.reverts(booster.deposit(poolId, depositAmount, true), "shutdown");
     });
 
     it("deposit all lp token and stake", async () => {
       await booster.depositAll(poolId, true);
 
       assert.equal((await lpToken.balanceOf(USER1)).toString(), 0);
-      assert.equal(
-        (await rewardPool.balanceOf(USER1)).toString(),
-        depositAmount
-      );
+      assert.equal((await rewardPool.balanceOf(USER1)).toString(), depositAmount);
     });
 
     it("deposit all lp token without stake", async () => {
       await booster.depositAll(poolId, false);
 
       assert.equal((await lpToken.balanceOf(USER1)).toString(), 0);
-      assert.equal(
-        (await exchangeToken.balanceOf(USER1)).toString(),
-        depositAmount
-      );
+      assert.equal((await exchangeToken.balanceOf(USER1)).toString(), depositAmount);
     });
   });
 
@@ -195,10 +158,7 @@ contract("Booster", async (accounts) => {
       await booster.deposit(poolId, depositAmount, true);
 
       assert.equal((await lpToken.balanceOf(USER1)).toString(), 0);
-      assert.equal(
-        (await rewardPool.balanceOf(USER1)).toString(),
-        depositAmount
-      );
+      assert.equal((await rewardPool.balanceOf(USER1)).toString(), depositAmount);
 
       await rewardPool.withdraw(depositAmount, false);
       assert.equal((await rewardPool.balanceOf(USER1)).toString(), 0);
@@ -210,10 +170,7 @@ contract("Booster", async (accounts) => {
       await booster.deposit(poolId, depositAmount, true);
 
       assert.equal((await lpToken.balanceOf(USER1)).toString(), 0);
-      assert.equal(
-        (await rewardPool.balanceOf(USER1)).toString(),
-        depositAmount
-      );
+      assert.equal((await rewardPool.balanceOf(USER1)).toString(), depositAmount);
 
       await rewardPool.withdrawAll(false);
       assert.equal((await rewardPool.balanceOf(USER1)).toString(), 0);
@@ -225,10 +182,7 @@ contract("Booster", async (accounts) => {
       await booster.deposit(poolId, depositAmount, true);
 
       assert.equal((await lpToken.balanceOf(USER1)).toString(), 0);
-      assert.equal(
-        (await rewardPool.balanceOf(USER1)).toString(),
-        depositAmount
-      );
+      assert.equal((await rewardPool.balanceOf(USER1)).toString(), depositAmount);
 
       await rewardPool.withdrawAndUnwrap(depositAmount, false);
       assert.equal((await rewardPool.balanceOf(USER1)).toString(), 0);
@@ -239,10 +193,7 @@ contract("Booster", async (accounts) => {
       await booster.deposit(poolId, depositAmount, true);
 
       assert.equal((await lpToken.balanceOf(USER1)).toString(), 0);
-      assert.equal(
-        (await rewardPool.balanceOf(USER1)).toString(),
-        depositAmount
-      );
+      assert.equal((await rewardPool.balanceOf(USER1)).toString(), depositAmount);
 
       await rewardPool.withdrawAllAndUnwrap(false);
       assert.equal((await rewardPool.balanceOf(USER1)).toString(), 0);
@@ -253,10 +204,7 @@ contract("Booster", async (accounts) => {
       await booster.deposit(poolId, depositAmount, false);
 
       assert.equal((await lpToken.balanceOf(USER1)).toString(), 0);
-      assert.equal(
-        (await exchangeToken.balanceOf(USER1)).toString(),
-        depositAmount
-      );
+      assert.equal((await exchangeToken.balanceOf(USER1)).toString(), depositAmount);
 
       await booster.withdraw(poolId, depositAmount);
       assert.equal((await exchangeToken.balanceOf(USER1)).toString(), 0);
@@ -267,10 +215,7 @@ contract("Booster", async (accounts) => {
       await booster.deposit(poolId, depositAmount, false);
 
       assert.equal((await lpToken.balanceOf(USER1)).toString(), 0);
-      assert.equal(
-        (await exchangeToken.balanceOf(USER1)).toString(),
-        depositAmount
-      );
+      assert.equal((await exchangeToken.balanceOf(USER1)).toString(), depositAmount);
 
       await booster.withdrawAll(poolId);
       assert.equal((await exchangeToken.balanceOf(USER1)).toString(), 0);
@@ -284,14 +229,8 @@ contract("Booster", async (accounts) => {
       assert.equal((await booster.poolInfo(poolId))[5], true);
 
       assert.equal((await lpToken.balanceOf(USER1)).toString(), 0);
-      assert.equal(
-        (await rewardPool.balanceOf(USER1)).toString(),
-        depositAmount
-      );
-      assert.equal(
-        (await lpToken.balanceOf(booster.address)).toString(),
-        depositAmount
-      );
+      assert.equal((await rewardPool.balanceOf(USER1)).toString(), depositAmount);
+      assert.equal((await lpToken.balanceOf(booster.address)).toString(), depositAmount);
 
       await rewardPool.withdraw(depositAmount, false);
       assert.equal((await rewardPool.balanceOf(USER1)).toString(), 0);
@@ -306,14 +245,8 @@ contract("Booster", async (accounts) => {
       assert.equal((await booster.poolInfo(poolId))[5], true);
 
       assert.equal((await lpToken.balanceOf(USER1)).toString(), 0);
-      assert.equal(
-        (await rewardPool.balanceOf(USER1)).toString(),
-        depositAmount
-      );
-      assert.equal(
-        (await lpToken.balanceOf(booster.address)).toString(),
-        depositAmount
-      );
+      assert.equal((await rewardPool.balanceOf(USER1)).toString(), depositAmount);
+      assert.equal((await lpToken.balanceOf(booster.address)).toString(), depositAmount);
 
       await rewardPool.withdrawAndUnwrap(depositAmount, false);
       assert.equal((await rewardPool.balanceOf(USER1)).toString(), 0);
@@ -328,14 +261,8 @@ contract("Booster", async (accounts) => {
       assert.equal(await booster.isShutdown(), true);
 
       assert.equal((await lpToken.balanceOf(USER1)).toString(), 0);
-      assert.equal(
-        (await rewardPool.balanceOf(USER1)).toString(),
-        depositAmount
-      );
-      assert.equal(
-        (await lpToken.balanceOf(booster.address)).toString(),
-        depositAmount
-      );
+      assert.equal((await rewardPool.balanceOf(USER1)).toString(), depositAmount);
+      assert.equal((await lpToken.balanceOf(booster.address)).toString(), depositAmount);
 
       await rewardPool.withdraw(depositAmount, false);
       assert.equal((await rewardPool.balanceOf(USER1)).toString(), 0);
@@ -350,14 +277,8 @@ contract("Booster", async (accounts) => {
       assert.equal(await booster.isShutdown(), true);
 
       assert.equal((await lpToken.balanceOf(USER1)).toString(), 0);
-      assert.equal(
-        (await rewardPool.balanceOf(USER1)).toString(),
-        depositAmount
-      );
-      assert.equal(
-        (await lpToken.balanceOf(booster.address)).toString(),
-        depositAmount
-      );
+      assert.equal((await rewardPool.balanceOf(USER1)).toString(), depositAmount);
+      assert.equal((await lpToken.balanceOf(booster.address)).toString(), depositAmount);
 
       await rewardPool.withdrawAndUnwrap(depositAmount, false);
       assert.equal((await rewardPool.balanceOf(USER1)).toString(), 0);
@@ -392,17 +313,11 @@ contract("Booster", async (accounts) => {
 
       const callerBalBefore = (await veassetToken.balanceOf(USER2)).toString();
 
-      const lpRewardPoolBalBefore = (
-        await veassetToken.balanceOf(rewardPool.address)
-      ).toString();
+      const lpRewardPoolBalBefore = (await veassetToken.balanceOf(rewardPool.address)).toString();
 
-      const baseRewardPoolBalBefore = (
-        await veassetToken.balanceOf(ve3TokenRewardPool.address)
-      ).toString();
+      const baseRewardPoolBalBefore = (await veassetToken.balanceOf(ve3TokenRewardPool.address)).toString();
 
-      const ve3dRewardPoolBalBefore = (
-        await veassetToken.balanceOf(vetokenRewards.address)
-      ).toString();
+      const ve3dRewardPoolBalBefore = (await veassetToken.balanceOf(vetokenRewards.address)).toString();
 
       // claim rewards
       await booster.earmarkRewards(poolId, { from: USER2 });
@@ -415,46 +330,19 @@ contract("Booster", async (accounts) => {
 
       const callerBalAfter = (await veassetToken.balanceOf(USER2)).toString();
       log("caller balance before earmarkRewards", formatEther(callerBalBefore));
-      log(
-        "caller balance after earmarkRewards 0.5%",
-        formatEther(callerBalAfter)
-      );
+      log("caller balance after earmarkRewards 0.5%", formatEther(callerBalAfter));
 
-      const lpRewardPoolBalAfter = (
-        await veassetToken.balanceOf(rewardPool.address)
-      ).toString();
-      log(
-        "lp reward pool balance before earmarkRewards",
-        formatEther(lpRewardPoolBalBefore)
-      );
-      log(
-        "lp reward pool balance after earmarkRewards 85%",
-        formatEther(lpRewardPoolBalAfter)
-      );
+      const lpRewardPoolBalAfter = (await veassetToken.balanceOf(rewardPool.address)).toString();
+      log("lp reward pool balance before earmarkRewards", formatEther(lpRewardPoolBalBefore));
+      log("lp reward pool balance after earmarkRewards 85%", formatEther(lpRewardPoolBalAfter));
 
-      const baseRewardPoolBalAfter = (
-        await veassetToken.balanceOf(ve3TokenRewardPool.address)
-      ).toString();
-      log(
-        "base reward pool balance before earmarkRewards",
-        formatEther(baseRewardPoolBalBefore)
-      );
-      log(
-        "base reward pool balance after earmarkRewards 10%",
-        formatEther(baseRewardPoolBalAfter)
-      );
+      const baseRewardPoolBalAfter = (await veassetToken.balanceOf(ve3TokenRewardPool.address)).toString();
+      log("base reward pool balance before earmarkRewards", formatEther(baseRewardPoolBalBefore));
+      log("base reward pool balance after earmarkRewards 10%", formatEther(baseRewardPoolBalAfter));
 
-      const ve3dRewardPoolBalAfter = (
-        await veassetToken.balanceOf(vetokenRewards.address)
-      ).toString();
-      log(
-        "ve3d reward pool balance before earmarkRewards",
-        formatEther(ve3dRewardPoolBalBefore)
-      );
-      log(
-        "ve3d reward pool balance after earmarkRewards 4.5%",
-        formatEther(ve3dRewardPoolBalAfter)
-      );
+      const ve3dRewardPoolBalAfter = (await veassetToken.balanceOf(vetokenRewards.address)).toString();
+      log("ve3d reward pool balance before earmarkRewards", formatEther(ve3dRewardPoolBalBefore));
+      log("ve3d reward pool balance after earmarkRewards 4.5%", formatEther(ve3dRewardPoolBalAfter));
 
       const totalRewards = toBN(toBN(callerBalAfter).minus(callerBalBefore))
         .plus(toBN(lpRewardPoolBalAfter).minus(lpRewardPoolBalBefore))
@@ -465,33 +353,22 @@ contract("Booster", async (accounts) => {
       log("total reward", formatEther(totalRewards));
 
       //assertion
-      console.log(
-        "reward distribution assertion based on the current percentage configuration"
-      );
-      const earmarkIncentiveAmount = toBN(totalRewards)
-        .times(earmarkIncentive)
-        .idiv(FEE_DENOMINATOR)
-        .toString();
+      console.log("reward distribution assertion based on the current percentage configuration");
+      const earmarkIncentiveAmount = toBN(totalRewards).times(earmarkIncentive).idiv(FEE_DENOMINATOR).toString();
       assert.equal(
         toBN(callerBalAfter).minus(callerBalBefore).toString(),
         earmarkIncentiveAmount,
         "earmarkIncentive 0.5%"
       );
 
-      const lockIncentiveAmount = toBN(totalRewards)
-        .times(lockIncentive)
-        .idiv(FEE_DENOMINATOR)
-        .toString();
+      const lockIncentiveAmount = toBN(totalRewards).times(lockIncentive).idiv(FEE_DENOMINATOR).toString();
       assert.equal(
         toBN(baseRewardPoolBalAfter).minus(baseRewardPoolBalBefore).toString(),
         lockIncentiveAmount,
         "lockIncentive 10%"
       );
 
-      const stakerIncentiveAmount = toBN(totalRewards)
-        .times(stakerIncentive)
-        .idiv(FEE_DENOMINATOR)
-        .toString();
+      const stakerIncentiveAmount = toBN(totalRewards).times(stakerIncentive).idiv(FEE_DENOMINATOR).toString();
       assert.equal(
         toBN(ve3dRewardPoolBalAfter).minus(ve3dRewardPoolBalBefore).toString(),
         stakerIncentiveAmount,
@@ -508,9 +385,7 @@ contract("Booster", async (accounts) => {
         "lp reward pool 85%"
       );
 
-      const userRewardBalBefore = (
-        await veassetToken.balanceOf(USER1)
-      ).toString();
+      const userRewardBalBefore = (await veassetToken.balanceOf(USER1)).toString();
       const userEarnedBefore = (await rewardPool.earned(USER1)).toString();
       const userVetokenBalBefore = (await vetoken.balanceOf(USER1)).toString();
 
@@ -523,36 +398,16 @@ contract("Booster", async (accounts) => {
       // user claim rewards
       await rewardPool.getReward();
 
-      const userRewardBalAfter = (
-        await veassetToken.balanceOf(USER1)
-      ).toString();
+      const userRewardBalAfter = (await veassetToken.balanceOf(USER1)).toString();
 
       const userVetokenBalAfter = (await vetoken.balanceOf(USER1)).toString();
 
-      log(
-        "user earned balance before increase time",
-        formatEther(userEarnedBefore)
-      );
-      log(
-        "user earned balance after increase time",
-        formatEther(userEarnedAfter)
-      );
-      log(
-        "user reward balance before getReward",
-        formatEther(userRewardBalBefore)
-      );
-      log(
-        "user reward balance after getReward",
-        formatEther(userRewardBalAfter)
-      );
-      log(
-        "user vetoken balance before getReward",
-        formatEther(userVetokenBalBefore)
-      );
-      log(
-        "user vetoken balance after getReward",
-        formatEther(userVetokenBalAfter)
-      );
+      log("user earned balance before increase time", formatEther(userEarnedBefore));
+      log("user earned balance after increase time", formatEther(userEarnedAfter));
+      log("user reward balance before getReward", formatEther(userRewardBalBefore));
+      log("user reward balance after getReward", formatEther(userRewardBalAfter));
+      log("user vetoken balance before getReward", formatEther(userVetokenBalBefore));
+      log("user vetoken balance after getReward", formatEther(userVetokenBalAfter));
 
       console.log("stake vetoken balance");
 
@@ -560,71 +415,36 @@ contract("Booster", async (accounts) => {
       await vetoken.approve(vetokenRewards.address, userVetokenBalAfter);
       await vetokenRewards.stake(userVetokenBalAfter);
 
-      const userVetokenBalAfterStake = (
-        await vetoken.balanceOf(USER1)
-      ).toString();
-      const ve3TokenEarnedBefore = (
-        await vetokenRewards.earned(veassetToken.address, USER1)
-      ).toString();
-      log(
-        "user vetoken balance after stake",
-        formatEther(userVetokenBalAfterStake)
-      );
+      const userVetokenBalAfterStake = (await vetoken.balanceOf(USER1)).toString();
+      const ve3TokenEarnedBefore = (await vetokenRewards.earned(veassetToken.address, USER1)).toString();
+      log("user vetoken balance after stake", formatEther(userVetokenBalAfterStake));
 
       await time.increase(86400);
       await time.advanceBlock();
 
-      const ve3TokenEarnedAfter = (
-        await vetokenRewards.earned(veassetToken.address, USER1)
-      ).toString();
-      log(
-        "user ve3token earned before increase time",
-        formatEther(ve3TokenEarnedBefore)
-      );
-      log(
-        "user ve3token earned after increase time",
-        formatEther(ve3TokenEarnedAfter)
-      );
+      const ve3TokenEarnedAfter = (await vetokenRewards.earned(veassetToken.address, USER1)).toString();
+      log("user ve3token earned before increase time", formatEther(ve3TokenEarnedBefore));
+      log("user ve3token earned after increase time", formatEther(ve3TokenEarnedAfter));
 
       console.log("get reward with stake");
-      const userStakedBalBefore = (
-        await ve3TokenRewardPool.balanceOf(USER1)
-      ).toString();
+      const userStakedBalBefore = (await ve3TokenRewardPool.balanceOf(USER1)).toString();
 
       //get reward and stake
       await vetokenRewards.getReward(USER1, true, true);
 
-      const userStakedBalAfter = (
-        await ve3TokenRewardPool.balanceOf(USER1)
-      ).toString();
-      log(
-        "user ve3Token staked balance before getReward",
-        formatEther(userStakedBalBefore)
-      );
-      log(
-        "user ve3Token staked balance after getReward",
-        formatEther(userStakedBalAfter)
-      );
+      const userStakedBalAfter = (await ve3TokenRewardPool.balanceOf(USER1)).toString();
+      log("user ve3Token staked balance before getReward", formatEther(userStakedBalBefore));
+      log("user ve3Token staked balance after getReward", formatEther(userStakedBalAfter));
 
-      const newve3TokenEarnedBefore = (
-        await vetokenRewards.earned(veassetToken.address, USER1)
-      ).toString();
+      const newve3TokenEarnedBefore = (await vetokenRewards.earned(veassetToken.address, USER1)).toString();
 
       // increase time
       await time.increase(86400);
       await time.advanceBlock();
 
-      const newve3TokenEarnedAfter = (
-        await vetokenRewards.earned(veassetToken.address, USER1)
-      ).toString();
-      log(
-        "user ve3token earned after getreward",
-        formatEther(newve3TokenEarnedBefore)
-      );
-      log(
-        "user ve3token earned after increase time second time",
-        formatEther(newve3TokenEarnedAfter)
-      );
+      const newve3TokenEarnedAfter = (await vetokenRewards.earned(veassetToken.address, USER1)).toString();
+      log("user ve3token earned after getreward", formatEther(newve3TokenEarnedBefore));
+      log("user ve3token earned after increase time second time", formatEther(newve3TokenEarnedAfter));
 
       const ve3TokenBalBefore = (await ve3Token.balanceOf(USER1)).toString();
 
@@ -633,27 +453,13 @@ contract("Booster", async (accounts) => {
       await vetokenRewards.getReward(USER1, true, false);
 
       const ve3TokenBalAfter = (await ve3Token.balanceOf(USER1)).toString();
-      log(
-        "user ve3token balance before getreward",
-        formatEther(ve3TokenBalBefore)
-      );
-      log(
-        "user ve3token balance after getreward",
-        formatEther(ve3TokenBalAfter)
-      );
+      log("user ve3token balance before getreward", formatEther(ve3TokenBalBefore));
+      log("user ve3token balance after getreward", formatEther(ve3TokenBalAfter));
     });
 
     it("earmarkRewards - check reward distribution", async () => {
-      await booster.setFees(
-        toBN(1000),
-        toBN(450),
-        toBN(300),
-        toBN(50),
-        toBN(200)
-      );
-      stakerLockIncentive = toBN(
-        (await booster.stakerLockIncentive()).toString()
-      );
+      await booster.setFees(toBN(1000), toBN(450), toBN(300), toBN(50), toBN(200));
+      stakerLockIncentive = toBN((await booster.stakerLockIncentive()).toString());
       platformFee = toBN((await booster.platformFee()).toString());
       await booster.setTreasury(treasury);
 
@@ -672,25 +478,15 @@ contract("Booster", async (accounts) => {
 
       const callerBalBefore = (await veassetToken.balanceOf(USER2)).toString();
 
-      const lpRewardPoolBalBefore = (
-        await veassetToken.balanceOf(rewardPool.address)
-      ).toString();
+      const lpRewardPoolBalBefore = (await veassetToken.balanceOf(rewardPool.address)).toString();
 
-      const baseRewardPoolBalBefore = (
-        await veassetToken.balanceOf(ve3TokenRewardPool.address)
-      ).toString();
+      const baseRewardPoolBalBefore = (await veassetToken.balanceOf(ve3TokenRewardPool.address)).toString();
 
-      const ve3dRewardPoolBalBefore = (
-        await veassetToken.balanceOf(vetokenRewards.address)
-      ).toString();
+      const ve3dRewardPoolBalBefore = (await veassetToken.balanceOf(vetokenRewards.address)).toString();
 
-      const stakerLockPoolBalBefore = (
-        await veassetToken.balanceOf(stakerLockPool.address)
-      ).toString();
+      const stakerLockPoolBalBefore = (await veassetToken.balanceOf(stakerLockPool.address)).toString();
 
-      const treasuryBalBefore = (
-        await veassetToken.balanceOf(treasury)
-      ).toString();
+      const treasuryBalBefore = (await veassetToken.balanceOf(treasury)).toString();
 
       // claim rewards
       await booster.earmarkRewards(poolId, { from: USER2 });
@@ -703,70 +499,27 @@ contract("Booster", async (accounts) => {
 
       const callerBalAfter = (await veassetToken.balanceOf(USER2)).toString();
       log("caller balance before earmarkRewards", formatEther(callerBalBefore));
-      log(
-        "caller balance after earmarkRewards 0.5%",
-        formatEther(callerBalAfter)
-      );
+      log("caller balance after earmarkRewards 0.5%", formatEther(callerBalAfter));
 
-      const lpRewardPoolBalAfter = (
-        await veassetToken.balanceOf(rewardPool.address)
-      ).toString();
-      log(
-        "lp reward pool balance before earmarkRewards",
-        formatEther(lpRewardPoolBalBefore)
-      );
-      log(
-        "lp reward pool balance after earmarkRewards 85%",
-        formatEther(lpRewardPoolBalAfter)
-      );
+      const lpRewardPoolBalAfter = (await veassetToken.balanceOf(rewardPool.address)).toString();
+      log("lp reward pool balance before earmarkRewards", formatEther(lpRewardPoolBalBefore));
+      log("lp reward pool balance after earmarkRewards 85%", formatEther(lpRewardPoolBalAfter));
 
-      const baseRewardPoolBalAfter = (
-        await veassetToken.balanceOf(ve3TokenRewardPool.address)
-      ).toString();
-      log(
-        "base reward pool balance before earmarkRewards",
-        formatEther(baseRewardPoolBalBefore)
-      );
-      log(
-        "base reward pool balance after earmarkRewards 10%",
-        formatEther(baseRewardPoolBalAfter)
-      );
+      const baseRewardPoolBalAfter = (await veassetToken.balanceOf(ve3TokenRewardPool.address)).toString();
+      log("base reward pool balance before earmarkRewards", formatEther(baseRewardPoolBalBefore));
+      log("base reward pool balance after earmarkRewards 10%", formatEther(baseRewardPoolBalAfter));
 
-      const ve3dRewardPoolBalAfter = (
-        await veassetToken.balanceOf(vetokenRewards.address)
-      ).toString();
-      log(
-        "ve3d reward pool balance before earmarkRewards",
-        formatEther(ve3dRewardPoolBalBefore)
-      );
-      log(
-        "ve3d reward pool balance after earmarkRewards 4.5%",
-        formatEther(ve3dRewardPoolBalAfter)
-      );
+      const ve3dRewardPoolBalAfter = (await veassetToken.balanceOf(vetokenRewards.address)).toString();
+      log("ve3d reward pool balance before earmarkRewards", formatEther(ve3dRewardPoolBalBefore));
+      log("ve3d reward pool balance after earmarkRewards 4.5%", formatEther(ve3dRewardPoolBalAfter));
 
-      const stakerLockPoolBalAfter = (
-        await veassetToken.balanceOf(stakerLockPool.address)
-      ).toString();
-      log(
-        "xVE3D reward pool balance before earmarkRewards",
-        formatEther(stakerLockPoolBalBefore)
-      );
-      log(
-        "xVE3D reward pool balance after earmarkRewards 3%",
-        formatEther(stakerLockPoolBalAfter)
-      );
+      const stakerLockPoolBalAfter = (await veassetToken.balanceOf(stakerLockPool.address)).toString();
+      log("xVE3D reward pool balance before earmarkRewards", formatEther(stakerLockPoolBalBefore));
+      log("xVE3D reward pool balance after earmarkRewards 3%", formatEther(stakerLockPoolBalAfter));
 
-      const treasuryBalAfter = (
-        await veassetToken.balanceOf(treasury)
-      ).toString();
-      log(
-        "treasury balance before earmarkRewards",
-        formatEther(treasuryBalBefore)
-      );
-      log(
-        "treasury balance after earmarkRewards 2%",
-        formatEther(treasuryBalAfter)
-      );
+      const treasuryBalAfter = (await veassetToken.balanceOf(treasury)).toString();
+      log("treasury balance before earmarkRewards", formatEther(treasuryBalBefore));
+      log("treasury balance after earmarkRewards 2%", formatEther(treasuryBalAfter));
 
       const totalRewards = toBN(toBN(callerBalAfter).minus(callerBalBefore))
         .plus(toBN(lpRewardPoolBalAfter).minus(lpRewardPoolBalBefore))
@@ -779,43 +532,29 @@ contract("Booster", async (accounts) => {
       log("total reward", formatEther(totalRewards));
 
       //assertion
-      console.log(
-        "reward distribution assertion based on the current percentage configuration"
-      );
-      const earmarkIncentiveAmount = toBN(totalRewards)
-        .times(earmarkIncentive)
-        .idiv(FEE_DENOMINATOR)
-        .toString();
+      console.log("reward distribution assertion based on the current percentage configuration");
+      const earmarkIncentiveAmount = toBN(totalRewards).times(earmarkIncentive).idiv(FEE_DENOMINATOR).toString();
       assert.equal(
         toBN(callerBalAfter).minus(callerBalBefore).toString(),
         earmarkIncentiveAmount,
         "earmarkIncentive 0.5%"
       );
 
-      const lockIncentiveAmount = toBN(totalRewards)
-        .times(lockIncentive)
-        .idiv(FEE_DENOMINATOR)
-        .toString();
+      const lockIncentiveAmount = toBN(totalRewards).times(lockIncentive).idiv(FEE_DENOMINATOR).toString();
       assert.equal(
         toBN(baseRewardPoolBalAfter).minus(baseRewardPoolBalBefore).toString(),
         lockIncentiveAmount,
         "lockIncentive 10%"
       );
 
-      const stakerIncentiveAmount = toBN(totalRewards)
-        .times(stakerIncentive)
-        .idiv(FEE_DENOMINATOR)
-        .toString();
+      const stakerIncentiveAmount = toBN(totalRewards).times(stakerIncentive).idiv(FEE_DENOMINATOR).toString();
       assert.equal(
         toBN(ve3dRewardPoolBalAfter).minus(ve3dRewardPoolBalBefore).toString(),
         stakerIncentiveAmount,
         "stakerIncentive 4.5%"
       );
 
-      const stakerLookIncentiveAmount = toBN(totalRewards)
-        .times(stakerLockIncentive)
-        .idiv(FEE_DENOMINATOR)
-        .toString();
+      const stakerLookIncentiveAmount = toBN(totalRewards).times(stakerLockIncentive).idiv(FEE_DENOMINATOR).toString();
 
       assert.equal(
         toBN(stakerLockPoolBalAfter).minus(stakerLockPoolBalBefore).toString(),
@@ -823,15 +562,8 @@ contract("Booster", async (accounts) => {
         "stakerLockIncentive 3%"
       );
 
-      const platformFeeAmount = toBN(totalRewards)
-        .times(platformFee)
-        .idiv(FEE_DENOMINATOR)
-        .toString();
-      assert.equal(
-        toBN(treasuryBalAfter).minus(treasuryBalBefore).toString(),
-        platformFeeAmount,
-        "platform fee 2%"
-      );
+      const platformFeeAmount = toBN(totalRewards).times(platformFee).idiv(FEE_DENOMINATOR).toString();
+      assert.equal(toBN(treasuryBalAfter).minus(treasuryBalBefore).toString(), platformFeeAmount, "platform fee 2%");
 
       assert.equal(
         toBN(lpRewardPoolBalAfter).minus(lpRewardPoolBalBefore).toString(),
@@ -865,31 +597,20 @@ contract("Booster", async (accounts) => {
         // stash pool
         const stashRewardPool = await ExtraRewardStashV3.at(stashAddress);
 
-        const stashTokenRewardPoolAddress = (await stashRewardPool.tokenInfo(0))
-          .rewardAddress;
+        const stashTokenRewardPoolAddress = (await stashRewardPool.tokenInfo(0)).rewardAddress;
         const stashTokenAddress = (await stashRewardPool.tokenInfo(0)).token;
         // reward pool for stash token
-        const stashTokenExtraRewardPool = await VirtualBalanceRewardPool.at(
-          stashTokenRewardPoolAddress
-        );
+        const stashTokenExtraRewardPool = await VirtualBalanceRewardPool.at(stashTokenRewardPoolAddress);
         // stash token
         const stashToken = await IERC20.at(stashTokenAddress);
 
-        const extraRewardPoolBalance = (
-          await stashToken.balanceOf(stashTokenExtraRewardPool.address)
-        ).toString();
+        const extraRewardPoolBalance = (await stashToken.balanceOf(stashTokenExtraRewardPool.address)).toString();
 
         assert.isTrue(toBN(extraRewardPoolBalance).gt(0));
         assert.equal((await lpRewardPool.extraRewardsLength()).toString(), "1");
-        assert.equal(
-          await lpRewardPool.extraRewards(0),
-          stashTokenRewardPoolAddress
-        );
+        assert.equal(await lpRewardPool.extraRewards(0), stashTokenRewardPoolAddress);
 
-        log(
-          "extra reward pool (stash) balance ",
-          formatEther(extraRewardPoolBalance)
-        );
+        log("extra reward pool (stash) balance ", formatEther(extraRewardPoolBalance));
       } else this.skip();
     });
   });
@@ -910,11 +631,7 @@ contract("Booster", async (accounts) => {
     });
 
     it("earmarkFees full flow", async () => {
-      await veassetDepositer.deposit(
-        depositAmount,
-        true,
-        ve3TokenRewardPool.address
-      );
+      await veassetDepositer.deposit(depositAmount, true, ve3TokenRewardPool.address);
 
       //increase time
       await time.increaseTo(
@@ -926,38 +643,24 @@ contract("Booster", async (accounts) => {
 
       const lockFeesAddress = await booster.lockFees();
       const lockFees = await VirtualBalanceRewardPool.at(lockFeesAddress);
-      const rewardBalBefore = (
-        await feeToken.balanceOf(lockFeesAddress)
-      ).toString();
+      const rewardBalBefore = (await feeToken.balanceOf(lockFeesAddress)).toString();
 
       //prepare claiming reward
       const feeTokenBal = await feeToken.balanceOf(USER1);
 
-      await feeToken.transfer(feeDistro, feeTokenBal.toString(), {
-        from: USER1,
-      });
+      await feeToken.transfer(feeDistro, feeTokenBal.toString(), { from: USER1 });
 
       const feeDistroContract = new web3.eth.Contract(feeDisrtroABI, feeDistro);
 
-      await feeDistroContract.methods
-        .checkpoint_token()
-        .send({ from: feeDistroAdmin, gas: 8000000 });
+      await feeDistroContract.methods.checkpoint_token().send({ from: feeDistroAdmin, gas: 8000000 });
 
       // claim fee rewards
       await booster.earmarkFees();
 
-      const rewardBalAfter = (
-        await feeToken.balanceOf(lockFeesAddress)
-      ).toString();
+      const rewardBalAfter = (await feeToken.balanceOf(lockFeesAddress)).toString();
       assert.isTrue(toBN(rewardBalAfter).gt(0));
-      log(
-        "reward pool balance before earmarkFees",
-        formatUnits(rewardBalBefore, unit)
-      );
-      log(
-        "reward pool balance after earmarkFees",
-        formatUnits(rewardBalAfter, unit)
-      );
+      log("reward pool balance before earmarkFees", formatUnits(rewardBalBefore, unit));
+      log("reward pool balance after earmarkFees", formatUnits(rewardBalAfter, unit));
 
       const userBalBefore = (await feeToken.balanceOf(USER1)).toString();
 
@@ -972,21 +675,12 @@ contract("Booster", async (accounts) => {
       await ve3TokenRewardPool.getReward(USER1, true);
       const userBalAfter = (await feeToken.balanceOf(USER1)).toString();
 
-      log(
-        "user reward balance before get reward",
-        formatUnits(userBalBefore, unit)
-      );
-      log(
-        "user reward balance after get reward",
-        formatUnits(userBalAfter, unit)
-      );
+      log("user reward balance before get reward", formatUnits(userBalBefore, unit));
+      log("user reward balance after get reward", formatUnits(userBalAfter, unit));
 
       assert.equal(
         (await feeToken.balanceOf(lockFeesAddress)).toString(),
-        toBN(rewardBalAfter)
-          .minus(rewardBalBefore)
-          .minus(toBN(userBalAfter).minus(userBalBefore))
-          .toFixed()
+        toBN(rewardBalAfter).minus(rewardBalBefore).minus(toBN(userBalAfter).minus(userBalBefore)).toFixed()
       );
 
       await time.increaseTo(
@@ -996,18 +690,11 @@ contract("Booster", async (accounts) => {
       );
       await time.advanceBlock();
 
-      log(
-        "reward pool reward per token",
-        formatUnits((await lockFees.rewardPerToken()).toString(), unit)
-      );
+      log("reward pool reward per token", formatUnits((await lockFees.rewardPerToken()).toString(), unit));
     });
 
     it("earmarkFees - check reward distribution", async () => {
-      await veassetDepositer.deposit(
-        depositAmount,
-        true,
-        ve3TokenRewardPool.address
-      );
+      await veassetDepositer.deposit(depositAmount, true, ve3TokenRewardPool.address);
 
       //increase time
       await time.increaseTo(
@@ -1019,70 +706,36 @@ contract("Booster", async (accounts) => {
 
       await booster.setFeeInfo(toBN(3000), toBN(7000));
       assert.equal((await booster.lockFeesIncentive()).toString(), toBN(3000));
-      assert.equal(
-        (await booster.stakerLockFeesIncentive()).toString(),
-        toBN(7000)
-      );
+      assert.equal((await booster.stakerLockFeesIncentive()).toString(), toBN(7000));
 
-      const lockFeesIncentive = toBN(
-        (await booster.lockFeesIncentive()).toString()
-      );
-      const stakerLockFeesIncentive = toBN(
-        (await booster.stakerLockFeesIncentive()).toString()
-      );
+      const lockFeesIncentive = toBN((await booster.lockFeesIncentive()).toString());
+      const stakerLockFeesIncentive = toBN((await booster.stakerLockFeesIncentive()).toString());
 
       const lockFeesAddress = await booster.lockFees();
-      const stakerLockFeesAddress = await booster.stakerLockFees();
 
-      const lockFeesBalBefore = (
-        await feeToken.balanceOf(lockFeesAddress)
-      ).toString();
-      const stakerLockFeesBalBefore = (
-        await feeToken.balanceOf(stakerLockFeesAddress)
-      ).toString();
+      const lockFeesBalBefore = (await feeToken.balanceOf(lockFeesAddress)).toString();
+      const stakerLockFeesBalBefore = (await feeToken.balanceOf(stakerLockPool.address)).toString();
 
       //prepare claiming reward
       const feeTokenBal = await feeToken.balanceOf(USER1);
 
-      await feeToken.transfer(feeDistro, feeTokenBal.toString(), {
-        from: USER1,
-      });
+      await feeToken.transfer(feeDistro, feeTokenBal.toString(), { from: USER1 });
 
       const feeDistroContract = new web3.eth.Contract(feeDisrtroABI, feeDistro);
 
-      await feeDistroContract.methods
-        .checkpoint_token()
-        .send({ from: feeDistroAdmin, gas: 8000000 });
+      await feeDistroContract.methods.checkpoint_token().send({ from: feeDistroAdmin, gas: 8000000 });
 
-      console.log(
-        "distributes 30% of fee to the lock pool + 70% to xve3d reward pool"
-      );
+      console.log("distributes 30% of fee to the lock pool + 70% to xve3d reward pool");
       // claim fee rewards
       await booster.earmarkFees();
 
-      const lockFeesBalAfter = (
-        await feeToken.balanceOf(lockFeesAddress)
-      ).toString();
-      log(
-        "lockFees reward pool balance before earmarkFees",
-        formatUnits(lockFeesBalBefore, unit)
-      );
-      log(
-        "lockFees reward pool balance after earmarkFees",
-        formatUnits(lockFeesBalAfter, unit)
-      );
+      const lockFeesBalAfter = (await feeToken.balanceOf(lockFeesAddress)).toString();
+      log("lockFees reward pool balance before earmarkFees", formatUnits(lockFeesBalBefore, unit));
+      log("lockFees reward pool balance after earmarkFees", formatUnits(lockFeesBalAfter, unit));
 
-      const stakerLockFeesBalAfter = (
-        await feeToken.balanceOf(stakerLockFeesAddress)
-      ).toString();
-      log(
-        "stakerlockFees reward pool balance before earmarkFees",
-        formatUnits(stakerLockFeesBalBefore, unit)
-      );
-      log(
-        "stakerlockFees reward pool balance after earmarkFees",
-        formatUnits(stakerLockFeesBalAfter, unit)
-      );
+      const stakerLockFeesBalAfter = (await feeToken.balanceOf(stakerLockPool.address)).toString();
+      log("stakerlockFees reward pool balance before earmarkFees", formatUnits(stakerLockFeesBalBefore, unit));
+      log("stakerlockFees reward pool balance after earmarkFees", formatUnits(stakerLockFeesBalAfter, unit));
 
       const totalRewards = toBN(toBN(lockFeesBalAfter).minus(lockFeesBalBefore))
         .plus(toBN(stakerLockFeesBalAfter).minus(stakerLockFeesBalBefore))
@@ -1093,10 +746,7 @@ contract("Booster", async (accounts) => {
 
       //assertion
 
-      const lockFeesIncentiveAmount = toBN(totalRewards)
-        .times(lockFeesIncentive)
-        .idiv(FEE_DENOMINATOR)
-        .toString();
+      const lockFeesIncentiveAmount = toBN(totalRewards).times(lockFeesIncentive).idiv(FEE_DENOMINATOR).toString();
       assert.closeTo(
         toBN(lockFeesBalAfter).minus(lockFeesBalBefore).toNumber(),
         toBN(lockFeesIncentiveAmount).toNumber(),
@@ -1134,34 +784,18 @@ contract("Booster", async (accounts) => {
     it("voteGaugeWeight - pickle", async function () {
       if (network == Networks.pickle) {
         await veassetDepositer.deposit(depositAmount, true);
-        log(
-          "total weight before vote",
-          (await gaugeProxy.methods.totalWeight().call()).toString()
-        );
-        log(
-          "gauge weight before vote",
-          (await gaugeProxy.methods.weights(lpToken.address).call()).toString()
-        );
+        log("total weight before vote", (await gaugeProxy.methods.totalWeight().call()).toString());
+        log("gauge weight before vote", (await gaugeProxy.methods.weights(lpToken.address).call()).toString());
         log(
           "total voting weight before vote",
-          (
-            await gaugeProxy.methods.usedWeights(voterProxy.address).call()
-          ).toString()
+          (await gaugeProxy.methods.usedWeights(voterProxy.address).call()).toString()
         );
         await booster.voteGaugeWeight([lpToken.address], [6000000]);
-        log(
-          "total weight after vote",
-          (await gaugeProxy.methods.totalWeight().call()).toString()
-        );
-        log(
-          "gauge weight after vote",
-          (await gaugeProxy.methods.weights(lpToken.address).call()).toString()
-        );
+        log("total weight after vote", (await gaugeProxy.methods.totalWeight().call()).toString());
+        log("gauge weight after vote", (await gaugeProxy.methods.weights(lpToken.address).call()).toString());
         log(
           "total voting weight after vote",
-          (
-            await gaugeProxy.methods.usedWeights(voterProxy.address).call()
-          ).toString()
+          (await gaugeProxy.methods.usedWeights(voterProxy.address).call()).toString()
         );
       } else {
         this.skip();
@@ -1172,39 +806,19 @@ contract("Booster", async (accounts) => {
       if (network != Networks.pickle) {
         const gaugeAdd = (await booster.poolInfo(poolId))[2];
         await veassetDepositer.deposit(depositAmount, true);
-        log(
-          "total weight before vote",
-          (await gaugeProxy.methods.get_total_weight().call()).toString()
-        );
-        log(
-          "gauge weight before vote",
-          (
-            await gaugeProxy.methods.get_gauge_weight(gaugeAdd).call()
-          ).toString()
-        );
+        log("total weight before vote", (await gaugeProxy.methods.get_total_weight().call()).toString());
+        log("gauge weight before vote", (await gaugeProxy.methods.get_gauge_weight(gaugeAdd).call()).toString());
         log(
           "total voting weight before vote",
-          (
-            await gaugeProxy.methods.vote_user_power(voterProxy.address).call()
-          ).toString()
+          (await gaugeProxy.methods.vote_user_power(voterProxy.address).call()).toString()
         );
 
         await booster.voteGaugeWeight([gaugeAdd], [6000]);
-        log(
-          "total weight after vote",
-          (await gaugeProxy.methods.get_total_weight().call()).toString()
-        );
-        log(
-          "gauge weight after vote",
-          (
-            await gaugeProxy.methods.get_gauge_weight(gaugeAdd).call()
-          ).toString()
-        );
+        log("total weight after vote", (await gaugeProxy.methods.get_total_weight().call()).toString());
+        log("gauge weight after vote", (await gaugeProxy.methods.get_gauge_weight(gaugeAdd).call()).toString());
         log(
           "total voting weight after vote",
-          (
-            await gaugeProxy.methods.vote_user_power(voterProxy.address).call()
-          ).toString()
+          (await gaugeProxy.methods.vote_user_power(voterProxy.address).call()).toString()
         );
       } else {
         this.skip();

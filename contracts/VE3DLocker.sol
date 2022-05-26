@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import "./helper/MathUtil.sol";
 import "./helper/BoringMath.sol";
@@ -34,11 +35,11 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
     using BoringMath112 for uint112;
     using BoringMath32 for uint32;
     using SafeERC20 for IERC20;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     /* ========== STATE VARIABLES ========== */
 
     struct Reward {
-        bool useBoost;
         bool isVeAsset;
         uint40 periodFinish;
         uint208 rewardRate;
@@ -50,12 +51,10 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
     }
     struct Balances {
         uint112 locked;
-        uint112 boosted;
         uint32 nextUnlockIndex;
     }
     struct LockedBalance {
         uint112 amount;
-        uint112 boosted;
         uint32 unlockTime;
     }
     struct EarnedData {
@@ -63,7 +62,7 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
         uint256 amount;
     }
     struct Epoch {
-        uint224 supply; //epoch boosted supply
+        uint224 supply;
         uint32 date; //epoch start date
     }
 
@@ -73,6 +72,8 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
     //rewards
     address[] public rewardTokens;
     mapping(address => Reward) public rewardData;
+
+    EnumerableSet.AddressSet internal operators;
 
     // Duration that rewards are streamed over
     uint256 public constant rewardsDuration = 86400 * 7;
@@ -89,19 +90,12 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
 
     //supplies and epochs
     uint256 public lockedSupply;
-    uint256 public boostedSupply;
     Epoch[] public epochs;
 
     //mappings for balance data
     mapping(address => Balances) public balances;
     mapping(address => LockedBalance[]) public userLocks;
 
-    //boost
-    address public boostPayment;
-    uint256 public maximumBoostPayment = 0;
-    uint256 public boostRate = 10000;
-    uint256 public nextMaximumBoostPayment = 0;
-    uint256 public nextBoostRate = 10000;
     uint256 public constant denominator = 10000;
 
     //management
@@ -118,13 +112,12 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(address _stakingToken, address _boostPayment) Ownable() {
+    constructor(address _stakingToken) Ownable() {
         _name = "Vote Locked Vetoken Token";
         _symbol = "xVE3D";
         _decimals = 18;
 
         stakingToken = IERC20(_stakingToken);
-        boostPayment = _boostPayment;
 
         uint256 currentEpoch = block.timestamp.div(rewardsDuration).mul(rewardsDuration);
         epochs.push(Epoch({supply: 0, date: uint32(currentEpoch)}));
@@ -142,7 +135,7 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
         return _symbol;
     }
 
-    function version() public view returns (uint256) {
+    function version() public pure returns (uint256) {
         return 2;
     }
 
@@ -155,16 +148,15 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
         address _ve3Token,
         address _ve3TokenStaking,
         address _distributor,
-        bool _useBoost,
         bool _isVeAsset
-    ) public onlyOwner {
+    ) external {
+        require(_msgSender() == owner() || operators.contains(_msgSender()), "!Auth");
         require(rewardData[_rewardsToken].lastUpdateTime == 0);
         require(_rewardsToken != address(stakingToken));
         rewardTokens.push(_rewardsToken);
 
         rewardData[_rewardsToken].lastUpdateTime = uint40(block.timestamp);
         rewardData[_rewardsToken].periodFinish = uint40(block.timestamp);
-        rewardData[_rewardsToken].useBoost = _useBoost;
         rewardDistributors[_rewardsToken][_distributor] = true;
 
         rewardData[_rewardsToken].isVeAsset = _isVeAsset;
@@ -189,20 +181,6 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
         rewardDistributors[_rewardsToken][_distributor] = _approved;
     }
 
-    //set boost parameters
-    function setBoost(
-        uint256 _max,
-        uint256 _rate,
-        address _receivingAddress
-    ) external onlyOwner {
-        require(_max < 1500, "over max payment"); //max 15%
-        require(_rate < 30000, "over max rate"); //max 3x
-        require(_receivingAddress != address(0), "invalid address"); //must point somewhere valid
-        nextMaximumBoostPayment = _max;
-        nextBoostRate = _rate;
-        boostPayment = _receivingAddress;
-    }
-
     //set kick incentive
     function setKickIncentive(uint256 _rate, uint256 _delay) external onlyOwner {
         require(_rate <= 500, "over max rate"); //max 5% per epoch
@@ -214,6 +192,14 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
     //shutdown the contract. unstake all tokens. release all locks
     function shutdown() external onlyOwner {
         isShutdown = true;
+    }
+
+    function addOperator(address _newOperator) public onlyOwner {
+        operators.add(_newOperator);
+    }
+
+    function removeOperator(address _operator) public onlyOwner {
+        operators.remove(_operator);
     }
 
     //set approvals for locking veAsset and staking VE3Token
@@ -244,7 +230,7 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
     /* ========== VIEWS ========== */
 
     function _rewardPerToken(address _rewardsToken) internal view returns (uint256) {
-        if (boostedSupply == 0) {
+        if (lockedSupply == 0) {
             return rewardData[_rewardsToken].rewardPerTokenStored;
         }
         return
@@ -253,7 +239,7 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
                     .sub(rewardData[_rewardsToken].lastUpdateTime)
                     .mul(rewardData[_rewardsToken].rewardRate)
                     .mul(1e18)
-                    .div(rewardData[_rewardsToken].useBoost ? boostedSupply : lockedSupply)
+                    .div(lockedSupply)
             );
     }
 
@@ -297,22 +283,12 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
     {
         userRewards = new EarnedData[](rewardTokens.length);
         Balances storage userBalance = balances[_account];
-        uint256 boostedBal = userBalance.boosted;
         for (uint256 i = 0; i < userRewards.length; i++) {
             address token = rewardTokens[i];
             userRewards[i].token = token;
-            userRewards[i].amount = _earned(
-                _account,
-                token,
-                rewardData[token].useBoost ? boostedBal : userBalance.locked
-            );
+            userRewards[i].amount = _earned(_account, token, userBalance.locked);
         }
         return userRewards;
-    }
-
-    // Total BOOSTED balance of an account, including unlocked but not withdrawn tokens
-    function rewardWeightOf(address _user) external view returns (uint256 amount) {
-        return balances[_user].boosted;
     }
 
     // total token balance of an account, including unlocked but not withdrawn tokens
@@ -320,44 +296,13 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
         return balances[_user].locked;
     }
 
-    //BOOSTED balance of an account which only includes properly locked tokens as of the most recent eligible epoch
+    //balance of an account which only includes properly locked tokens as of the most recent eligible epoch
     function balanceOf(address _user) external view returns (uint256 amount) {
-        LockedBalance[] storage locks = userLocks[_user];
-        Balances storage userBalance = balances[_user];
-        uint256 nextUnlockIndex = userBalance.nextUnlockIndex;
-
-        //start with current boosted amount
-        amount = balances[_user].boosted;
-
-        uint256 locksLength = locks.length;
-        //remove old records only (will be better gas-wise than adding up)
-        for (uint256 i = nextUnlockIndex; i < locksLength; i++) {
-            if (locks[i].unlockTime <= block.timestamp) {
-                amount = amount.sub(locks[i].boosted);
-            } else {
-                //stop now as no futher checks are needed
-                break;
-            }
-        }
-
-        //also remove amount locked in the next epoch
-        uint256 currentEpoch = block.timestamp.div(rewardsDuration).mul(rewardsDuration);
-        if (
-            locksLength > 0 &&
-            uint256(locks[locksLength - 1].unlockTime).sub(lockDuration) > currentEpoch
-        ) {
-            amount = amount.sub(locks[locksLength - 1].boosted);
-        }
-
-        return amount;
+        return balanceAtEpochOf(findEpochId(block.timestamp), _user);
     }
 
-    //BOOSTED balance of an account which only includes properly locked tokens at the given epoch
-    function balanceAtEpochOf(uint256 _epoch, address _user)
-        external
-        view
-        returns (uint256 amount)
-    {
+    //balance of an account which only includes properly locked tokens at the given epoch
+    function balanceAtEpochOf(uint256 _epoch, address _user) public view returns (uint256 amount) {
         LockedBalance[] storage locks = userLocks[_user];
 
         //get timestamp of given epoch index
@@ -372,7 +317,7 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
             //lock epoch must be less or equal to the epoch we're basing from.
             if (lockEpoch <= epochTime) {
                 if (lockEpoch > cutoffEpoch) {
-                    amount = amount.add(locks[i].boosted);
+                    amount = amount.add(locks[i].amount);
                 } else {
                     //stop now as no futher checks matter
                     break;
@@ -395,7 +340,7 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
             locksLength > 0 &&
             uint256(locks[locksLength - 1].unlockTime).sub(lockDuration) > currentEpoch
         ) {
-            return locks[locksLength - 1].boosted;
+            return locks[locksLength - 1].amount;
         }
 
         return 0;
@@ -417,7 +362,7 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
 
             //return the next epoch balance
             if (lockEpoch == nextEpoch) {
-                return locks[i].boosted;
+                return locks[i].amount;
             } else if (lockEpoch < nextEpoch) {
                 //no need to check anymore
                 break;
@@ -427,7 +372,7 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
         return 0;
     }
 
-    //supply of all properly locked BOOSTED balances at most recent eligible epoch
+    //supply of all properly locked balances at most recent eligible epoch
     function totalSupply() external view returns (uint256 supply) {
         uint256 currentEpoch = block.timestamp.div(rewardsDuration).mul(rewardsDuration);
         uint256 cutoffEpoch = currentEpoch.sub(lockDuration);
@@ -450,7 +395,7 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
         return supply;
     }
 
-    //supply of all properly locked BOOSTED balances at the given epoch
+    //supply of all properly locked balances at the given epoch
     function totalSupplyAtEpoch(uint256 _epoch) external view returns (uint256 supply) {
         uint256 epochStart = uint256(epochs[_epoch].date).div(rewardsDuration).mul(
             rewardsDuration
@@ -470,7 +415,7 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
     }
 
     //find an epoch index based on timestamp
-    function findEpochId(uint256 _time) external view returns (uint256 epoch) {
+    function findEpochId(uint256 _time) public view returns (uint256 epoch) {
         uint256 max = epochs.length - 1;
         uint256 min = 0;
 
@@ -554,39 +499,25 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
                 );
                 epochs.push(Epoch({supply: 0, date: uint32(nextEpochDate)}));
             }
-
-            //update boost parameters on a new epoch
-            if (boostRate != nextBoostRate) {
-                boostRate = nextBoostRate;
-            }
-            if (maximumBoostPayment != nextMaximumBoostPayment) {
-                maximumBoostPayment = nextMaximumBoostPayment;
-            }
         }
     }
 
     // Locked tokens cannot be withdrawn for lockDuration and are eligible to receive stakingReward rewards
-    function lock(
-        address _account,
-        uint256 _amount,
-        uint256 _spendRatio
-    ) external nonReentrant updateReward(_account) {
+    function lock(address _account, uint256 _amount) external nonReentrant updateReward(_account) {
         //pull tokens
         stakingToken.safeTransferFrom(msg.sender, address(this), _amount);
 
         //lock
-        _lock(_account, _amount, _spendRatio, false);
+        _lock(_account, _amount, false);
     }
 
     //lock tokens
     function _lock(
         address _account,
         uint256 _amount,
-        uint256 _spendRatio,
         bool _isRelock
     ) internal {
         require(_amount > 0, "Cannot stake 0");
-        require(_spendRatio <= maximumBoostPayment, "over max spend");
         require(!isShutdown, "shutdown");
 
         Balances storage bal = balances[_account];
@@ -594,21 +525,12 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
         //must try check pointing epoch first
         _checkpointEpoch();
 
-        //calc lock and boosted amount
-        uint256 spendAmount = _amount.mul(_spendRatio).div(denominator);
-        uint256 boostRatio = boostRate.mul(_spendRatio).div(
-            maximumBoostPayment == 0 ? 1 : maximumBoostPayment
-        );
-        uint112 lockAmount = _amount.sub(spendAmount).to112();
-        uint112 boostedAmount = _amount.add(_amount.mul(boostRatio).div(denominator)).to112();
-
         //add user balances
+        uint112 lockAmount = _amount.to112();
         bal.locked = bal.locked.add(lockAmount);
-        bal.boosted = bal.boosted.add(boostedAmount);
 
         //add to total supplies
         lockedSupply = lockedSupply.add(lockAmount);
-        boostedSupply = boostedSupply.add(boostedAmount);
 
         //add user lock records or add to current
         uint256 lockEpoch = block.timestamp.div(rewardsDuration).mul(rewardsDuration);
@@ -622,11 +544,7 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
         //if the latest user lock is smaller than this lock, always just add new entry to the end of the list
         if (idx == 0 || userLocks[_account][idx - 1].unlockTime < unlockTime) {
             userLocks[_account].push(
-                LockedBalance({
-                    amount: lockAmount,
-                    boosted: boostedAmount,
-                    unlockTime: uint32(unlockTime)
-                })
+                LockedBalance({amount: lockAmount, unlockTime: uint32(unlockTime)})
             );
         } else {
             //else add to a current lock
@@ -642,7 +560,6 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
             if (userLocks[_account][idx - 1].unlockTime == unlockTime) {
                 LockedBalance storage userL = userLocks[_account][idx - 1];
                 userL.amount = userL.amount.add(lockAmount);
-                userL.boosted = userL.boosted.add(boostedAmount);
             } else {
                 //can only enter here if a relock is made after a lock and there's no lock entry
                 //for the current epoch.
@@ -660,16 +577,11 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
 
                 //add a copy to end of list
                 userLocks[_account].push(
-                    LockedBalance({
-                        amount: userL.amount,
-                        boosted: userL.boosted,
-                        unlockTime: userL.unlockTime
-                    })
+                    LockedBalance({amount: userL.amount, unlockTime: userL.unlockTime})
                 );
 
                 //insert current epoch lock entry by overwriting the entry at length-2
                 userL.amount = lockAmount;
-                userL.boosted = boostedAmount;
                 userL.unlockTime = uint32(unlockTime);
             }
         }
@@ -681,14 +593,9 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
             eIndex--;
         }
         Epoch storage e = epochs[eIndex];
-        e.supply = e.supply.add(uint224(boostedAmount));
+        e.supply = e.supply.add(uint224(lockAmount));
 
-        //send boost payment
-        if (spendAmount > 0) {
-            stakingToken.safeTransfer(boostPayment, spendAmount);
-        }
-
-        emit Staked(_account, lockEpoch, _amount, lockAmount, boostedAmount);
+        emit Staked(_account, lockEpoch, _amount, lockAmount);
     }
 
     // Withdraw all currently locked tokens where the unlock time has passed
@@ -702,14 +609,12 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
         LockedBalance[] storage locks = userLocks[_account];
         Balances storage userBalance = balances[_account];
         uint112 locked;
-        uint112 boostedAmount;
         uint256 length = locks.length;
         uint256 reward = 0;
 
         if (isShutdown || locks[length - 1].unlockTime <= block.timestamp.sub(_checkDelay)) {
             //if time is beyond last lock, can just bundle everything together
             locked = userBalance.locked;
-            boostedAmount = userBalance.boosted;
 
             //dont delete, just set next index
             userBalance.nextUnlockIndex = length.to32();
@@ -738,7 +643,6 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
 
                 //add to cumulative amounts
                 locked = locked.add(locks[i].amount);
-                boostedAmount = boostedAmount.add(locks[i].boosted);
 
                 //check for kick reward
                 //each epoch over due increases reward
@@ -767,9 +671,7 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
 
         //update user balances and total supplies
         userBalance.locked = userBalance.locked.sub(locked);
-        userBalance.boosted = userBalance.boosted.sub(boostedAmount);
         lockedSupply = lockedSupply.sub(locked);
-        boostedSupply = boostedSupply.sub(boostedAmount);
 
         emit Withdrawn(_account, locked, _relock);
 
@@ -786,7 +688,7 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
 
         //relock or return to user
         if (_relock) {
-            _lock(_withdrawTo, locked, 0, true);
+            _lock(_withdrawTo, locked, true);
         } else {
             stakingToken.safeTransfer(_withdrawTo, locked);
         }
@@ -871,18 +773,14 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
         rdata.periodFinish = block.timestamp.add(rewardsDuration).to40();
     }
 
-    function notifyRewardAmount(address _rewardsToken, uint256 _reward)
+    function queueNewRewards(address _rewardsToken, uint256 _reward)
         external
         updateReward(address(0))
     {
-        require(rewardDistributors[_rewardsToken][msg.sender]);
+        require(rewardDistributors[_rewardsToken][msg.sender], "Auth!");
         require(_reward > 0, "No reward");
 
         _notifyReward(_rewardsToken, _reward);
-
-        // handle the transfer of reward tokens via `transferFrom` to reduce the number
-        // of transactions required and ensure correctness of the _reward amount
-        IERC20(_rewardsToken).safeTransferFrom(msg.sender, address(this), _reward);
 
         emit RewardAdded(_rewardsToken, _reward);
     }
@@ -901,7 +799,7 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
         {
             //stack too deep
             Balances storage userBalance = balances[_account];
-            uint256 boostedBal = userBalance.boosted;
+
             for (uint256 i = 0; i < rewardTokens.length; i++) {
                 address token = rewardTokens[i];
                 rewardData[token].rewardPerTokenStored = _rewardPerToken(token).to208();
@@ -909,12 +807,7 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
                     rewardData[token].periodFinish
                 ).to40();
                 if (_account != address(0)) {
-                    //check if reward is boostable or not. use boosted or locked balance accordingly
-                    rewards[_account][token] = _earned(
-                        _account,
-                        token,
-                        rewardData[token].useBoost ? boostedBal : userBalance.locked
-                    );
+                    rewards[_account][token] = _earned(_account, token, userBalance.locked);
                     userRewardPerTokenPaid[_account][token] = rewardData[token]
                         .rewardPerTokenStored;
                 }
@@ -929,8 +822,7 @@ contract VE3DLocker is ReentrancyGuard, Ownable {
         address indexed _user,
         uint256 indexed _epoch,
         uint256 _paidAmount,
-        uint256 _lockedAmount,
-        uint256 _boostedAmount
+        uint256 _lockedAmount
     );
     event Withdrawn(address indexed _user, uint256 _amount, bool _relocked);
     event KickReward(address indexed _user, address indexed _kicked, uint256 _reward);

@@ -99,7 +99,7 @@ contract VE3DRewardPool is Ownable {
         rewardManager = rewardManager_;
     }
 
-    function addRewardToken(
+    function addReward(
         address _rewardToken,
         address _veAssetDeposits,
         address _ve3TokenRewards,
@@ -333,7 +333,7 @@ contract VE3DRewardPool is Ownable {
         getReward(msg.sender, true, _stake);
     }
 
-    function donate(address _rewardToken, uint256 _amount) external returns (bool) {
+    function donate(address _rewardToken, uint256 _amount) external {
         IERC20(_rewardToken).safeTransferFrom(msg.sender, address(this), _amount);
         rewardTokenInfo[_rewardToken].queuedRewards += _amount;
     }

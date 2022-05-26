@@ -16,11 +16,16 @@ interface IRewards {
 
     function queueNewRewards(address, uint256) external;
 
-    function notifyRewardAmount(uint256) external;
-
-    function notifyRewardAmount(address _rewardsToken, uint256 _reward) external;
-
     function addExtraReward(address) external;
+
+    function addReward(
+        address _rewardsToken,
+        address _veAssetDeposits,
+        address _ve3Token,
+        address _ve3TokenStaking,
+        address _distributor,
+        bool _isVeAsset
+    ) external;
 
     function stakingToken() external view returns (address);
 

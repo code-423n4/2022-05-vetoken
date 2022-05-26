@@ -158,7 +158,7 @@ contract VirtualBalanceRewardPool is VirtualBalanceWrapper {
         getReward(msg.sender);
     }
 
-    function donate(uint256 _amount) external returns (bool) {
+    function donate(uint256 _amount) external {
         IERC20(rewardToken).safeTransferFrom(msg.sender, address(this), _amount);
         queuedRewards = queuedRewards.add(_amount);
     }

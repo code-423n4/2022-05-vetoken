@@ -7,7 +7,7 @@ const PoolManager = artifacts.require("PoolManager");
 const VeToken = artifacts.require("VeToken");
 const VE3DRewardPool = artifacts.require("VE3DRewardPool");
 const { addContract } = require("./helper/addContracts");
-const XVE3DRewardPool = artifacts.require("XVE3DRewardPool");
+const VE3DLocker = artifacts.require("VE3DLocker");
 
 module.exports = async function (deployer, network, accounts) {
   global.created = false;
@@ -51,7 +51,7 @@ module.exports = async function (deployer, network, accounts) {
   addContract("system", "vetokenRewards", ve3dRewardPool.address);
 
   // xVE3D Reward Pool
-  await deployer.deploy(XVE3DRewardPool, veTokenAddress, admin, rFactory.address);
-  const xVE3DRewardPool = await XVE3DRewardPool.deployed();
-  addContract("system", "xVE3DRewards", xVE3DRewardPool.address);
+  await deployer.deploy(VE3DLocker, veTokenAddress);
+  const ve3dLocker = await VE3DLocker.deployed();
+  addContract("system", "ve3dLocker", ve3dLocker.address);
 };

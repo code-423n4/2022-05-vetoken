@@ -12,7 +12,7 @@ const Booster = artifacts.require("Booster");
 const TokenFactory = artifacts.require("TokenFactory");
 const StashFactory = artifacts.require("StashFactory");
 const VE3DRewardPool = artifacts.require("VE3DRewardPool");
-const XVE3DRewardPool = artifacts.require("XVE3DRewardPool");
+const VE3DLocker = artifacts.require("VE3DLocker");
 const IERC20 = artifacts.require("IERC20");
 const SmartWalletWhitelist = artifacts.require("SmartWalletWhitelist");
 const BigNumber = require("bignumber.js");
@@ -50,7 +50,7 @@ module.exports = async function (deployer, network, accounts) {
   const tFactory = await TokenFactory.deployed();
   const sFactory = await StashFactory.deployed();
   const ve3dRewardPool = await VE3DRewardPool.at(contractList.system.vetokenRewards);
-  const xVE3DRewardPool = await XVE3DRewardPool.at(contractList.system.xVE3DRewards);
+  const ve3dLocker = await VE3DLocker.at(contractList.system.ve3dLocker);
 
   await web3.eth.sendTransaction({ from: admin, to: checkerAdmin, value: web3.utils.toWei("1") });
 
@@ -134,17 +134,29 @@ module.exports = async function (deployer, network, accounts) {
   logTransaction(await tFactory.addOperator(booster.address), "tFactory addOperator");
   logTransaction(await sFactory.addOperator(booster.address), "sFactory addOperator");
   logTransaction(await ve3dRewardPool.addOperator(booster.address), "ve3dRewardPool add operator");
-  logTransaction(await xVE3DRewardPool.addOperator(booster.address), "xve3dRewardPool add operator");
+  logTransaction(await ve3dLocker.addOperator(booster.address), "ve3dLocker add operator");
   //add rewardToken to the pool
   logTransaction(
-    await ve3dRewardPool.addRewardToken(angle.address, depositor.address, ve3TokenRewardPool.address, ve3Token.address),
+    await ve3dRewardPool.addReward(angle.address, depositor.address, ve3TokenRewardPool.address, ve3Token.address),
     "ve3dRewardPool addRewardToken"
   );
 
+  //add rewardToken to the ve3dLocker
+  logTransaction(
+    await ve3dLocker.addReward(
+      angle.address,
+      depositor.address,
+      ve3Token.address,
+      ve3TokenRewardPool.address,
+      booster.address,
+      true
+    ),
+    "ve3dLocker addRewardToken"
+  );
   logTransaction(await booster.setTreasury(depositor.address), "booster setTreasury");
 
   logTransaction(
-    await booster.setRewardContracts(ve3TokenRewardPool.address, ve3dRewardPool.address, xVE3DRewardPool.address),
+    await booster.setRewardContracts(ve3TokenRewardPool.address, ve3dRewardPool.address, ve3dLocker.address),
     "booster setRewardContracts"
   );
   logTransaction(await booster.setPoolManager(contractList.system.poolManager), "booster setPoolManager");

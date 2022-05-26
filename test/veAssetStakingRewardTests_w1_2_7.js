@@ -1,14 +1,5 @@
-const {
-  BN,
-  constants,
-  expectEvent,
-  expectRevert,
-  time,
-} = require("@openzeppelin/test-helpers");
-const {
-  loadContracts,
-  contractAddresseList,
-} = require("./helper/dumpAddresses");
+const { BN, constants, expectEvent, expectRevert, time } = require("@openzeppelin/test-helpers");
+const { loadContracts, contractAddresseList } = require("./helper/dumpAddresses");
 const { parseEther, formatEther, parseUnits } = require("@ethersproject/units");
 var jsonfile = require("jsonfile");
 var baseContractList = jsonfile.readFileSync("contracts.json");
@@ -30,6 +21,7 @@ const VeTokenMinter = artifacts.require("VeTokenMinter");
 const PoolManager = artifacts.require("PoolManager");
 const VeToken = artifacts.require("VeToken");
 const IERC20 = artifacts.require("IERC20");
+const VE3DLocker = artifacts.require("VE3DLocker");
 
 function toBN(number) {
   return new BigNumber(number);
@@ -61,17 +53,14 @@ contract("Staking Reward Test", async (accounts) => {
   before("setup", async () => {
     await loadContracts();
     // basic contract
-    vetokenMinter = await VeTokenMinter.at(
-      baseContractList.system.vetokenMinter
-    );
+    vetokenMinter = await VeTokenMinter.at(baseContractList.system.vetokenMinter);
     vetoken = await VeToken.at(baseContractList.system.vetoken);
     rFactory = await RewardFactory.at(baseContractList.system.rFactory);
     tFactory = await TokenFactory.at(baseContractList.system.tFactory);
     sFactory = await StashFactory.at(baseContractList.system.sFactory);
     poolManager = await PoolManager.at(baseContractList.system.poolManager);
-    vetokenRewards = await VE3DRewardPool.at(
-      baseContractList.system.vetokenRewards
-    );
+    vetokenRewards = await VE3DRewardPool.at(baseContractList.system.vetokenRewards);
+    stakerLockPool = await VE3DLocker.at(baseContractList.system.ve3dLocker);
     // veasset contracts
     veassetToken = await IERC20.at(contractAddresseList[0]);
     escrow = await IERC20.at(contractAddresseList[1]);
@@ -98,25 +87,14 @@ contract("Staking Reward Test", async (accounts) => {
     const lpTokenDepositAmount = wei("5");
     const lockRewardsPoolAddress = await booster.lockRewards();
     const ve3DillRewardPool = await BaseRewardPool.at(lockRewardsPoolAddress); //cvxCrvRewards, ve3Token rewards(veAsset)
-    const ve3DillRewardPoolBalanceOfUserABefore =
-      await ve3DillRewardPool.balanceOf(userA);
+    const ve3DillRewardPoolBalanceOfUserABefore = await ve3DillRewardPool.balanceOf(userA);
     assert.equal(lockRewardsPoolAddress, contractAddresseList[7]);
 
     const stakerRewardsPoolAddress = await booster.stakerRewards(); //vetoken rewards,   cvxRewards
     //const stakerRewardsPool = await VE3DRewardPool.at(stakerRewardsPoolAddress);
-    assert.equal(
-      stakerRewardsPoolAddress,
-      baseContractList.system.vetokenRewards
-    );
+    assert.equal(stakerRewardsPoolAddress, baseContractList.system.vetokenRewards);
     const lockFeesPoolAddress = await booster.lockFees();
-    const ve3DillLockRewardPool = await VirtualBalanceRewardPool.at(
-      lockFeesPoolAddress
-    ); //vecrvRewards, ve3Token veVeAsset fees
-
-    const stakeLockFeesPoolAddress = await booster.stakerLockFees(); //xVE3D veVeAsset fees
-    const xVE3DstakeLockRewardPool = await VirtualBalanceRewardPool.at(
-      stakeLockFeesPoolAddress
-    );
+    const ve3DillLockRewardPool = await VirtualBalanceRewardPool.at(lockFeesPoolAddress); //vecrvRewards, ve3Token veVeAsset fees
 
     const lpRewardPoolInfo = await booster.poolInfo(0);
     const lpRewardPoolAddress = await lpRewardPoolInfo.veAssetRewards;
@@ -132,52 +110,23 @@ contract("Staking Reward Test", async (accounts) => {
     await lpToken.approve(booster.address, lpTokenDepositAmount);
     await booster.deposit(0, lpTokenDepositAmount, true);
     const lpRewardOfUserAAfter = await lPRewardPool.balanceOf(userA);
-    console.log(
-      "lpRewardOfUserA Before: " +
-        formatEther(lpRewardOfUserABefore.toString()) +
-        "\n"
-    );
-    console.log(
-      "lpRewardOfUserA After: " +
-        formatEther(lpRewardOfUserAAfter.toString()) +
-        "\n"
-    );
+    console.log("lpRewardOfUserA Before: " + formatEther(lpRewardOfUserABefore.toString()) + "\n");
+    console.log("lpRewardOfUserA After: " + formatEther(lpRewardOfUserAAfter.toString()) + "\n");
     assert.equal(lpRewardOfUserAAfter, lpTokenDepositAmount);
-    assert.equal(
-      toBN(lpRewardOfUserAAfter).minus(lpRewardOfUserABefore),
-      lpTokenDepositAmount
-    );
+    assert.equal(toBN(lpRewardOfUserAAfter).minus(lpRewardOfUserABefore), lpTokenDepositAmount);
 
     // approve and deposit veAsset(pickle, idle...) , staking returned ve3Dill
-    await veassetToken.approve(veassetDepositer.address, depositAmount, {
-      from: userA,
-    });
+    await veassetToken.approve(veassetDepositer.address, depositAmount, { from: userA });
     console.log("Our address " + userA + " was approved");
-    await veassetDepositer.deposit(
-      depositAmount,
-      true,
-      ve3DillRewardPool.address,
-      { from: userA }
-    );
+    await veassetDepositer.deposit(depositAmount, true, ve3DillRewardPool.address, { from: userA });
     const veAssetTokenBalanceBefore = await veassetToken.balanceOf(userA);
     const feeTokenBalanceBefore = await feeToken.balanceOf(userA);
-    const ve3DillRewardPoolBalanceOfUserAAfter =
-      await ve3DillRewardPool.balanceOf(userA);
+    const ve3DillRewardPoolBalanceOfUserAAfter = await ve3DillRewardPool.balanceOf(userA);
 
-    console.log(
-      "ve3DillRewardPoolBalanceOfUserA Before: " +
-        formatEther(lpRewardOfUserABefore.toString()) +
-        "\n"
-    );
-    console.log(
-      "ve3DillRewardPoolBalanceOfUserA After: " +
-        formatEther(lpRewardOfUserAAfter.toString()) +
-        "\n"
-    );
+    console.log("ve3DillRewardPoolBalanceOfUserA Before: " + formatEther(lpRewardOfUserABefore.toString()) + "\n");
+    console.log("ve3DillRewardPoolBalanceOfUserA After: " + formatEther(lpRewardOfUserAAfter.toString()) + "\n");
     assert.equal(
-      toBN(ve3DillRewardPoolBalanceOfUserAAfter).minus(
-        ve3DillRewardPoolBalanceOfUserABefore
-      ),
+      toBN(ve3DillRewardPoolBalanceOfUserAAfter).minus(ve3DillRewardPoolBalanceOfUserABefore),
       web3.utils.toWei("10")
     );
 
@@ -194,22 +143,14 @@ contract("Staking Reward Test", async (accounts) => {
     const latestBlock2 = await time.latestBlock();
     console.log("latest mined block number: ", latestBlock2.toString());
 
-    const lockFeesBalBefore = (
-      await veassetToken.balanceOf(lockFeesPoolAddress)
-    ).toString();
-    const stakerLockFeesBalBefore = (
-      await veassetToken.balanceOf(stakeLockFeesPoolAddress)
-    ).toString();
+    const lockFeesBalBefore = (await veassetToken.balanceOf(lockFeesPoolAddress)).toString();
+    const stakerLockFeesBalBefore = (await veassetToken.balanceOf(stakerLockPool.address)).toString();
 
     // mock veAsset project distributes reward in feeDistro
     const feeTokenBal = await feeToken.balanceOf(userA);
-    await feeToken.transfer(feeDistro, toBN(feeTokenBal).div(2), {
-      from: userA,
-    });
+    await feeToken.transfer(feeDistro, toBN(feeTokenBal).div(2), { from: userA });
     const feeDistroContract = new web3.eth.Contract(feeDisrtroABI, feeDistro);
-    await feeDistroContract.methods
-      .checkpoint_token()
-      .send({ from: feeDistroAdmin, gas: 8000000 });
+    await feeDistroContract.methods.checkpoint_token().send({ from: feeDistroAdmin, gas: 8000000 });
     const feeDistroBalance = await feeToken.balanceOf(feeDistro);
     console.log("mock feeDistro getting reward:", feeDistroBalance.toString());
 
@@ -217,40 +158,18 @@ contract("Staking Reward Test", async (accounts) => {
 
     await booster.earmarkFees();
     const lockRewardPerToken = await ve3DillLockRewardPool.rewardPerToken();
-    const stakeLockRewardPerToken =
-      await xVE3DstakeLockRewardPool.rewardPerToken();
-    const userARewardInlockRewardPool = await ve3DillLockRewardPool.earned(
-      userA
-    );
+    const stakeLockRewardPerToken = await stakerLockPool.rewardPerToken(veassetToken.address);
+    const userARewardInlockRewardPool = await ve3DillLockRewardPool.earned(userA);
 
-    const lockFeesBalAfter = (
-      await feeToken.balanceOf(lockFeesPoolAddress)
-    ).toString();
-    console.log(
-      "lockFees reward pool balance before earmarkFees",
-      lockFeesBalBefore
-    );
-    console.log(
-      "lockFees reward pool balance after earmarkFees",
-      lockFeesBalAfter
-    );
+    const lockFeesBalAfter = (await feeToken.balanceOf(lockFeesPoolAddress)).toString();
+    console.log("lockFees reward pool balance before earmarkFees", lockFeesBalBefore);
+    console.log("lockFees reward pool balance after earmarkFees", lockFeesBalAfter);
 
-    const stakerLockFeesBalAfter = (
-      await feeToken.balanceOf(stakeLockFeesPoolAddress)
-    ).toString();
-    console.log(
-      "stakerlockFees reward pool balance before earmarkFees",
-      stakerLockFeesBalBefore
-    );
-    console.log(
-      "stakerlockFees reward pool balance after earmarkFees",
-      stakerLockFeesBalAfter
-    );
+    const stakerLockFeesBalAfter = (await feeToken.balanceOf(stakerLockPool.address)).toString();
+    console.log("stakerlockFees reward pool balance before earmarkFees", stakerLockFeesBalBefore);
+    console.log("stakerlockFees reward pool balance after earmarkFees", stakerLockFeesBalAfter);
     assert.isAbove(Number(toBN(lockFeesBalAfter).minus(lockFeesBalBefore)), 0);
-    assert.isAbove(
-      Number(toBN(stakerLockFeesBalAfter).minus(stakerLockFeesBalBefore)),
-      0
-    );
+    assert.isAbove(Number(toBN(stakerLockFeesBalAfter).minus(stakerLockFeesBalBefore)), 0);
     assert.equal(
       Number(toBN(lockFeesBalAfter).minus(lockFeesBalBefore)),
       Number(toBN(stakerLockFeesBalAfter).minus(stakerLockFeesBalBefore))
@@ -259,12 +178,9 @@ contract("Staking Reward Test", async (accounts) => {
     // 2. 10% from the veAsset LP pools 17% profits (e.g. $Pickle) , call each pool, e.g. poolId=1 earmarkRewards(1)
     await booster.earmarkRewards(0, { from: userB });
     const lockRewardPerToken2 = await ve3DillLockRewardPool.rewardPerToken();
-    const stakeLockRewardPerToken2 =
-      await xVE3DstakeLockRewardPool.rewardPerToken();
+    const stakeLockRewardPerToken2 = await stakerLockPool.rewardPerToken(veassetToken.address);
     const lpPooolRewardPerToken = await lPRewardPool.rewardPerToken();
-    const userARewardInlockRewardPool2 = await ve3DillLockRewardPool.earned(
-      userA
-    );
+    const userARewardInlockRewardPool2 = await ve3DillLockRewardPool.earned(userA);
 
     console.log(
       "get lp pools rewards:",
@@ -279,32 +195,18 @@ contract("Staking Reward Test", async (accounts) => {
 
     // 3. VE3D minted based on formula ($VE3D), ve3D is minted from rewardClaimed() in booster when getReward() called.
     await ve3DillLockRewardPool.getReward(userA);
-    console.log(
-      "get veAsset locking rewards:",
-      lockRewardPerToken.toString(),
-      stakeLockRewardPerToken.toString()
-    );
-    console.log(
-      "user A rewards in ve3DillLockRewardPool from locking",
-      userARewardInlockRewardPool.toString()
-    );
+    console.log("get veAsset locking rewards:", lockRewardPerToken.toString(), stakeLockRewardPerToken.toString());
+    console.log("user A rewards in ve3DillLockRewardPool from locking", userARewardInlockRewardPool.toString());
     await lPRewardPool.getReward(userA, true);
     await ve3DillRewardPool.getReward(userA, true);
-    const veAssetBalanceAfterRewardClaimed = await veassetToken.balanceOf(
-      userA
-    );
+    const veAssetBalanceAfterRewardClaimed = await veassetToken.balanceOf(userA);
     const ve3TokenClaimed = await ve3Token.balanceOf(userA);
 
     console.log(
       "userA earned veAsset:",
-      toBN(veAssetBalanceAfterRewardClaimed)
-        .minus(veAssetTokenBalanceBefore)
-        .toString()
+      toBN(veAssetBalanceAfterRewardClaimed).minus(veAssetTokenBalanceBefore).toString()
     );
-    console.log(
-      "userA earned ve3Token:",
-      toBN(ve3TokenClaimed).minus(ve3TokenBalanceBefore).toString()
-    );
+    console.log("userA earned ve3Token:", toBN(ve3TokenClaimed).minus(ve3TokenBalanceBefore).toString());
 
     //assert.isAbove(Number((toBN(veAssetBalanceAfterRewardClaimed).minus(veAssetTokenBalanceBefore))), 0);
 
@@ -319,31 +221,18 @@ contract("Staking Reward Test", async (accounts) => {
 
     const feeTokenBal2 = await feeToken.balanceOf(userA);
     await feeToken.transfer(feeDistro, toBN(feeTokenBal2), { from: userA });
-    await feeDistroContract.methods
-      .checkpoint_token()
-      .send({ from: feeDistroAdmin, gas: 8000000 });
+    await feeDistroContract.methods.checkpoint_token().send({ from: feeDistroAdmin, gas: 8000000 });
 
     await booster.earmarkRewards(0, { from: userB });
     await booster.earmarkFees({ from: userB });
 
-    const userARewardInlockRewardPool3 = await ve3DillLockRewardPool.earned(
-      userA
-    );
+    const userARewardInlockRewardPool3 = await ve3DillLockRewardPool.earned(userA);
     const userARewardInlpRewardPool3 = await lPRewardPool.earned(userA);
     const userARewardInRewardPool3 = await ve3DillRewardPool.earned(userA);
-    console.log(
-      "user A new reward in LockRewardPool",
-      userARewardInlockRewardPool3.toString()
-    );
-    console.log(
-      "user A new reward in lpRewardPool",
-      userARewardInlpRewardPool3.toString()
-    );
+    console.log("user A new reward in LockRewardPool", userARewardInlockRewardPool3.toString());
+    console.log("user A new reward in lpRewardPool", userARewardInlpRewardPool3.toString());
     assert.isAbove(Number(userARewardInlpRewardPool3), 0);
-    console.log(
-      "user A new reward in RewardPool",
-      userARewardInRewardPool3.toString()
-    );
+    console.log("user A new reward in RewardPool", userARewardInRewardPool3.toString());
     assert.isAbove(Number(userARewardInRewardPool3), 0);
 
     // get rewards in different pools
@@ -351,12 +240,8 @@ contract("Staking Reward Test", async (accounts) => {
     await lPRewardPool.getReward(userA, true);
     await ve3DillRewardPool.getReward(userA, true);
 
-    const veAssetBalanceAfterRewardClaimed2 = await veassetToken.balanceOf(
-      userA
-    );
-    const veAssetEarned = toBN(veAssetBalanceAfterRewardClaimed2).minus(
-      veAssetTokenBalanceBefore
-    );
+    const veAssetBalanceAfterRewardClaimed2 = await veassetToken.balanceOf(userA);
+    const veAssetEarned = toBN(veAssetBalanceAfterRewardClaimed2).minus(veAssetTokenBalanceBefore);
     console.log("userA earned veAsset:", veAssetEarned.toString());
     // assert.isAbove(Number(veAssetEarned), 0);
 

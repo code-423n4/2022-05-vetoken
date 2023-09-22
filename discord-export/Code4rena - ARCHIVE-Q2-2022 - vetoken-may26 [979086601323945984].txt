@@ -1,0 +1,434 @@
+==============================================================
+Guild: Code4rena
+Channel: ARCHIVE-Q2-2022 / vetoken-may26
+==============================================================
+
+[05/25/2022 18:23] kartoonjoy
+👋 Hello and welcome to the contest channel for the $75K USDT **veToken** contest!
+
+📆 Contest opens 05/26/2022 20:00 (20:00 UTC) and runs through 06/02/2022 19:59  (19:59 UTC) (7 days).
+
+Please give a warm welcome to the veToken team, particularly @Jaqen, @solvetony, @River22 and @Amr, who will be available for questions either here in the channel or via DM.
+
+We'll be posting relevant links, documentation, etc. here, so if you intend to participate in this contest, consider enabling notifications for this channel. 🐺 ⏰
+
+Contest Page: https://code4rena.com/contests/2022-05-vetoken-finance-contest
+
+{Embed}
+https://code4rena.com/contests/2022-05-vetoken-finance-contest
+Code4rena veToken Finance contest
+$75,000 USDT
+26 May 2022—2 June 2022
+Code4rena - ARCHIVE-Q2-2022 - vetoken-may26 [979086601323945984].txt_Files/9be1042b-9790-4eb4-8b65-d9634ad02850-66B5B
+
+{Reactions}
+✅ (4) 
+
+[05/25/2022 20:37] p_crypt0
+Welcome @Jaqen 👋
+
+{Reactions}
+💯 ❤️ 
+
+[05/25/2022 21:10] Jaqen#8180
+Hello all, glad to work with you all to get the contracts audited . Feel free to DM me if you have any questions , in the meantime will invited few team mates to this channel by today as well
+
+{Reactions}
+❤️ (10) 
+
+[05/26/2022 19:59] st4rgard3n
+LFG ❤️
+
+{Reactions}
+❤️ (3) 
+
+[05/26/2022 19:59] st4rgard3n
+rawwwr (╯°□°）╯︵ ┻━┻
+
+
+[05/26/2022 19:59] st4rgard3n
+30 seconds
+
+
+[05/26/2022 20:05] Jaqen#8180
+Feel free to ask me any questions.  Looking forward to working with you guys.
+
+
+[05/26/2022 20:54] bernd_42
+Are all files within the `./contracts` folder in scope of this contest?
+
+
+[05/26/2022 21:11] Jaqen#8180
+The scope of the contest mentioned in the readme .  But in order to deploy and run it, you may need the all the contracts in order to work through the logics
+
+
+[05/26/2022 21:13] bernd_42
+I'm asking because in the readme it is not explicitly mentioned which contracts are _in_ scope or _out_ of scope. It only mentions "Contracts Of Interest"
+
+{Reactions}
+👍 
+
+[05/26/2022 21:25] Jaqen#8180
+Oh, got it. Good point.  I will update the readme to be more clear . 
+
+But just for you know , : 
+
+contracts of interest = scope of the contest
+
+{Reactions}
+👍 (6) 
+
+[05/28/2022 15:49] Jaqen#8180
+Hello Wardens ,
+Hoping you are having good weekends .
+
+To encourage the participation and appreciate you guys helping us to make the contracts more secure,  we decided to provide additional rewards as $VE3D ,  ($150K at $500m mkv ) for the auditors that would able to find critical issues including fund could be frozen in the pools or get stolen , drained. Etc. 
+
+We are working with C4 team to figure out how to fairly distribute this to you.  But just would like to let you guys know now that there will be additional rewards coming .
+
+veToken finance is well backed projects by curve , yearn , prep etc co founders and core members , we hope to build a generic tool for all projects that adopt ve model .
+
+Looking forward to working with you all along this journey.
+
+Thanks very much
+Jaqen
+
+{Reactions}
+nice (9) 🔥 (8) 
+
+[05/28/2022 16:10] illilli000
+can you explain a little bit more about what "$150K at $500m mkv" means? Just trying to see if it's immediately redeemable for usd, or if there is some implied vesting/benchmarking
+
+
+[05/28/2022 16:13] Jaqen#8180
+it will be distributed by VE3D with vesting period (4-10weeks,  haven’t decided it ) after project launched.
+
+
+[05/28/2022 16:15] Jaqen#8180
+The goal is to hope to work with you all for this project . Looking for any feedbacks.  Really appreciated
+
+
+[05/30/2022 23:06] hake_stake
+Hi, is VE3DLocker.sol in scope?
+
+
+[05/30/2022 23:12] 100proof
+I'm interested in the finance terminology behind it. Does $150K at $500M MKV mean that the portion of the tokens distributed would be $150K if the entire supply was valued at $500M?
+
+
+[05/30/2022 23:15] Jaqen#8180
+not in the scope, but you may need to deploy it in order to fully test the flow.
+
+
+[05/30/2022 23:16] hake_stake
+thank you sir
+
+
+[05/30/2022 23:16] Jaqen#8180
+yeah, exactly, but feel free to dm if you have questions on this.
+
+{Reactions}
+👍 
+
+[05/31/2022 00:45] 100proof
+I see there's an Idle and an Angle network. But what about Pickle, Ribbon, Balancer etc?
+
+
+[05/31/2022 00:45] 100proof
+Also I've always wanted to know what is the `ve` prefix. Something like "voting escrow"?
+
+
+[05/31/2022 01:00] Jaqen#8180
+Yeah, we only include two projects for proof of concept and audit purpose . And audit scope will be within those two projects
+
+
+[05/31/2022 01:00] Jaqen#8180
+Yeah , exactly
+
+
+[05/31/2022 11:46] un_for_given
+Hi @Jaqen , "veToken Finance is an forked version of the convex yield protocol". Would you please provide Diff for veToken vs Convex? so we can focus on parts that were changed.  (Something like this: https://gist.github.com/stas/6611bbd3866e1873b09919f5bf0d3b37)
+
+
+[05/31/2022 14:46] Jaqen#8180
+Sure , let me try to create one now
+
+
+[05/31/2022 15:19] 0xkitsune
+Just for clarity, these are the only contracts in scope for security or for gas optimizations as well as security?
+
+
+[05/31/2022 15:34] Jaqen#8180
+It is for both , and you could find details here : 
+
+$71,250 USDT main award pot
+$3,750 USDT gas optimization award 
+
+
+For VE3D rewards, would be similar rewards ratio
+
+{Reactions}
+👍 (2) 
+
+[05/31/2022 15:35] 0xkitsune
+Sounds good, thanks!
+
+
+[05/31/2022 15:37] Jaqen#8180
+Anytime man
+
+
+[06/01/2022 10:31] un_for_given
+Did you have any luck creating the Diff?
+
+
+[06/01/2022 13:35] hake_stake
+i used this https://www.diffchecker.com/diff
+
+{Embed}
+https://www.diffchecker.com/diff
+Diffchecker
+Code4rena - ARCHIVE-Q2-2022 - vetoken-may26 [979086601323945984].txt_Files/fb-image-655CE.png
+
+{Reactions}
+❤️ ✅ 
+
+[06/01/2022 15:48] Jaqen#8180
+Yeah, as we create with the new repo which kind of loose the commit history, do you mind just to use diffchecker.com? 
+
+Feel free to DM if you have any questions
+
+
+[06/01/2022 15:49] Jaqen#8180
+@unforgiven
+
+{Reactions}
+👍 
+
+[06/01/2022 20:11] ellahi
+@Jaqen sent friend request to dm
+
+
+[06/01/2022 20:15] vad37
+Hey, does ve3token suppose to be close to real represention of veAsset in 1:1 value?
+
+
+[06/01/2022 20:16] vad37
+I am confused with the logic curve of curve
+
+
+[06/01/2022 20:34] Jaqen#8180
+Thanks for reaching out ! Yeah Basically it is not guaranteed 1:1. It will be determined by supply and demand .
+
+
+[06/02/2022 20:02] C4
+**🚨 CONTEST ALERT**
+
+@🐺wardens The **veToken** contest is now closed! Huge thanks to everyone who participated 🔍, whether you submitted a finding or not.
+
+What's next: the **veToken** team will review the findings over the next couple of days, and then we'll pass them off to the judge. Keep an eye on #📢announcements for regular updates on how the contest is progressing through awarding 🤑🏆, judging 🧑‍⚖️ and reporting 📜. Feel free to ping a gardener if you have questions along the way!
+
+{Reactions}
+🎉 (15) 
+
+[06/03/2022 01:00] Jaqen#8180
+Thanks all  for looking at our contracts, really appreciated it .
+
+{Reactions}
+👍 (18) 
+
+[06/29/2022 04:12] Jaqen#8180
+hey, @simon135 , thanks for looking at our contract, and we have some questions on your submit, could you please accept the invite ?  thanks !
+
+{Reactions}
+👍 
+
+[07/18/2022 21:20] hake_stake
+Any updates on this one?
+
+
+[07/18/2022 21:38] alextheentreprenerd
+I'll prob need another week
+
+{Reactions}
+❤️ (3) 
+
+[07/26/2022 06:56] Jaqen#8180
+Hey Alex, thanks for looking at our contracts, just DMed
+
+
+[07/26/2022 06:56] Jaqen#8180
+@Alex The Entreprenerd
+
+
+[07/29/2022 01:50] 100proof
+Any more word on this?
+
+
+[07/29/2022 02:15] cloudellie
+Judging is nearly done - Alex was a little busy with OpenSea, as you may recall. 🙂
+
+{Reactions}
+💯 (6) 
+
+[08/08/2022 16:33] itsmetechjay
+🤑 🎉 Awards for **veToken Finance**:
+
+$8,847.08 USDT » @csanuragjain 
+$7,774.43 USDT » @xiaoming90 
+$6,390.65 USDT » @unforgiven 
+$6,327.46 USDT » @Picodes | Angle 
+$5,726.16 USDT » @IllIllI 
+$3,308.80 USDT » @kirk-baird 
+$3,111.08 USDT » @hyh 
+$3,109.92 USDT » @shenwilly 
+$2,816.05 USDT » @VAD37 
+$2,228.55 USDT » @thinklab 
+$2,209.03 USDT » @Ruhum 
+$2,175.78 USDT » @sorryNotsorry 
+$2,075.86 USDT » @0x52 
+$1,588.22 USDT » @Dravee 
+$1,166.19 USDT » SmartSek (@hake | SmartSek, @Django | Saloon Finance)
+$1,150.80 USDT » @cryptphi 
+$1,140.43 USDT » @Thunder 
+$1,052.94 USDT » @100proof 
+$1,015.20 USDT » @jonatascm 
+$970.32 USDT » @0x1f8b 
+$934.14 USDT » @ch13fd357r0y3r 
+$755.81 USDT » @Deleted User 
+$739.25 USDT » WatchPug (@JtP | WATCHPUG, @Ming | WATCHPUG)
+$659.77 USDT » @Kumpa 
+$613.67 USDT » @gzeon 
+$555.27 USDT » @TerrierLover 
+$545.56 USDT » @lucyoa 
+$314.09 USDT » @MiloTruck 
+$296.70 USDT » @Funen 
+$269.47 USDT » @minhquanym 
+$262.93 USDT » @0xNazgul 
+$260.15 USDT » @sashik_eth 
+$256.10 USDT » @FSchmoede 
+$224.53 USDT » @_Adam 
+$202.70 USDT » @Bernd 
+$199.21 USDT » @cccz 
+$175.35 USDT » @robee 
+$169.20 USDT » @cogitoergosumsw 
+$161.18 USDT » @horsefacts 
+$159.42 USDT » @catchup 
+$156.31 USDT » 0x29A (@anon, @Rotcivegaf)
+$156.17 USDT » Hawkeye (@0xwags, @0xmint)
+$153.90 USDT » @hansfriese 
+$153.50 USDT » @simon135 
+$153.33 USDT » 0xf15ers (@remora0, @twojoy)
+$153.31 USDT » @ellahi 
+$153.20 USDT » @c3phas 
+$153.19 USDT » @delfin454000 
+$152.73 USDT » @Sloth 
+$152.73 USDT » @ElKu 
+$152.69 USDT » @z3s 
+$103.42 USDT » @dipp 
+$100.03 USDT » @Deivitto 
+$99.92 USDT » @BouSalman 
+$99.92 USDT » GimelSec (@rayn | GimelSec, @sces60107 | GimelSec)
+$99.89 USDT » @Django | Saloon Finance 
+$99.89 USDT » @Chom 
+$97.39 USDT » @Tomio 
+$80.42 USDT » @Koustre 
+$57.63 USDT » @fatherOfBlocks 
+$54.72 USDT » @0xKitsune 
+$53.30 USDT » @Kaiziron 
+$53.30 USDT » @TomJ 
+$52.81 USDT » @0xkatana 
+$52.81 USDT » @Cityscape 
+$52.81 USDT » @Randyyy 
+$52.81 USDT » @RoiEvenHaim 
+$52.81 USDT » @sach1r0 
+$52.81 USDT » @saian 
+$52.81 USDT » @Waze 
+
+🏁 Findings summary
+---------------------------
+High risk findings: 1 total, 1 unique
+Med risk findings: 63 total, 30 unique
+Gas optimization reports: 48
+QA reports: 51
+
+Awards will be distributed on Polygon within the next 1-2 weeks. Congratulations all! 💸 💸 💸
+
+{Reactions}
+🤑 (4) 🎉 (9) hi5 (5) C4Keycap 
+
+[08/08/2022 19:11] .laezo
+just enough for a kebab
+
+{Reactions}
+😂 (6) 
+
+[08/08/2022 19:23] 0xdjango
+Pricey kebab my dude
+
+{Reactions}
+🍢 (2) 💸 
+
+[08/08/2022 22:39] 100proof
+Must live in Switzerland. I once payed 8.50CHF for a coffee there.
+
+{Reactions}
+☕ (4) 
+
+[08/09/2022 00:10] peritoflores
+I lived un Switzerland and You cannot survive with less than 2k a month
+
+{Reactions}
+💯 (2) 
+
+[08/10/2022 22:58] cloudellie
+Just an FYI that the VE3D tokens have not yet launched; we'll distribute tokens once we receive them from the sponsor.
+
+{Reactions}
+👍 
+
+[08/10/2022 23:16] TurnipBoy#5973
+Contest says payout is USDT. Are VE3D tokens extra?
+
+
+[08/10/2022 23:30] cloudellie
+Yes, these are in addition to the USDT payouts.
+
+{Reactions}
+chefskiss (2) 
+
+[08/10/2022 23:34] TurnipBoy#5973
+Can we have any details about the distribution? Is it 1:1 with USDT rewards?
+
+
+[08/10/2022 23:35] 100proof
+https://discord.com/channels/810916927919620096/979086601323945984/980135644347117678
+
+{Reactions}
+😅 
+
+[08/10/2022 23:35] cloudellie
+I don't know what the *value* of the tokens are, but we will use the standard C4 award distribution, so if you received a USDT payout, you'll also get tokens.
+
+{Reactions}
+👍 (2) 
+
+[08/10/2022 23:36] cloudellie
+I realize this is a bit different from what the sponsor originally said but that's because they weren't aware of C4's policy at the time. 🙂
+
+
+[08/15/2022 05:55] Jaqen#8180
+Thanks for all your guys help,  we are working with C4 to distribute VE3D as additional rewards once the token is launched.
+
+{Reactions}
+👍🏻 (4) thankyou (4) 😮 (2) 
+
+[12/13/2022 10:37] csanuragjain
+@Jaqen Any update for the VE3D token launch?
+
+{Reactions}
+👀 (3) 
+
+==============================================================
+Exported 61 message(s)
+==============================================================
